@@ -13,7 +13,21 @@ class AuthService {
     String expectedRole = 'petugas_kantin',
   }) async {
     try {
-      String queryEmail = email.trim();
+      String queryEmail = email.trim().toLowerCase();
+      
+      // Mock Parent Account
+      if (queryEmail == 'orangtua@sekolah.sch.id' && password == 'parent123') {
+        final parentProfile = {
+          'id': 'parent-id-wali-ahmad',
+          'email': 'orangtua@sekolah.sch.id',
+          'full_name': 'Budi Subarjo (Wali Ahmad)',
+          'role': 'parent',
+          'student_id': '03525ad9-d9e3-4f55-8ee6-7ff5b06d2025'
+        };
+        _currentProfile = parentProfile;
+        return parentProfile;
+      }
+
       // If it looks like a NIS (numeric or doesn't have @), append domain suffix for students
       if (expectedRole == 'student' && !queryEmail.contains('@')) {
         queryEmail = '$queryEmail@sekolah.sch.id';
