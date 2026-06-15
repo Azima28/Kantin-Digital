@@ -235,7 +235,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         // Form Input NIS/Email
                         Text(
-                          'Email / NISN Siswa',
+                          'Username / NISN / Email',
                           style: GoogleFonts.inter(
                             textStyle: const TextStyle(
                               color: AppColors.textDark,
@@ -249,7 +249,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           keyboardType: TextInputType.text,
                           style: const TextStyle(fontSize: 16),
                           decoration: const InputDecoration(
-                            hintText: 'petugas@sekolah.sch.id atau 20260012',
+                            hintText: 'Contoh: petugas, 20260012, atau petugas@sekolah.sch.id',
                             hintStyle: TextStyle(color: Color(0xFFBDC9C8)),
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Color(0xFFBDC9C8)),
@@ -261,7 +261,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           validator: (String? value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Email/NISN wajib diisi';
+                              return 'Username, NISN, atau Email wajib diisi';
                             }
                             return null;
                           },
@@ -413,13 +413,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     
                     // Petugas
                     _buildPreviewItem(
-                      roleName: 'KASIR / PETUGAS',
-                      identifier: 'petugas@sekolah.sch.id',
+                      roleName: 'KASIR / PETUGAS (USERNAME)',
+                      identifier: 'petugas',
                       password: 'password123',
                       onTap: () {
                         FocusScope.of(context).unfocus();
                         setState(() {
-                          _emailController.text = 'petugas@sekolah.sch.id';
+                          _emailController.text = 'petugas';
                           _passwordController.text = 'password123';
                         });
                         _showFillSnackBar('Kasir');

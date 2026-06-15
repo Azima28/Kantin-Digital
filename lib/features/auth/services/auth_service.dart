@@ -21,7 +21,7 @@ class AuthService {
       }
 
       // Mock Parent Account
-      if (queryEmail == '20260012@sekolah.sch.id' && password == 'parent123') {
+      if ((queryEmail == '20260012@sekolah.sch.id' || queryEmail == 'orangtua@sekolah.sch.id') && password == 'parent123') {
         if (expectedRole.isNotEmpty && expectedRole != 'parent') {
           throw Exception('Akses ditolak: Hak akses tidak sesuai.');
         }
