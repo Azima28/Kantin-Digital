@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kantin_digital/features/auth/services/auth_service.dart';
@@ -80,11 +81,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         email: email,
         password: password,
       );
-      print('DEBUG - Login SUCCESS, Profile: $profile');
+      debugPrint('DEBUG - Login SUCCESS, Profile: $profile');
       state = AuthState(isAuthenticated: true, profile: profile);
       return true;
     } catch (e) {
-      print('DEBUG - Login ERROR: $e');
+      debugPrint('DEBUG - Login ERROR: $e');
       state = AuthState(
         errorMessage: e.toString().replaceFirst('Exception: ', ''),
       );

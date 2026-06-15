@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kantin_digital/features/auth/screens/login_screen.dart';
 import 'package:kantin_digital/features/auth/screens/splash_screen.dart';
+import 'package:kantin_digital/features/kantin/screens/pos_dashboard_screen.dart';
+import 'package:kantin_digital/features/kantin/screens/cart_screen.dart';
+import 'package:kantin_digital/features/kantin/widgets/kantin_main_layout.dart';
 
 // Import placeholders/screens if they exist, otherwise we define inline mocks
 class AppRouter {
@@ -65,29 +68,39 @@ class AppRouter {
       ),
 
       // POS Cashier Routes
-      GoRoute(
-        path: posHome,
-        builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Beranda Kasir POS'),
+      // Shell Route for Tab Pages with Bottom Nav
+      ShellRoute(
+        builder: (BuildContext context, GoRouterState state, Widget child) {
+          return KantinMainLayout(child: child);
+        },
+        routes: <RouteBase>[
+          GoRoute(
+            path: posHome,
+            builder: (BuildContext context, GoRouterState state) => const PosDashboardScreen(),
+          ),
+          GoRoute(
+            path: posCheckCard,
+            builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Cek Kartu Siswa'),
+          ),
+          GoRoute(
+            path: posManageProducts,
+            builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Kelola Jajanan'),
+          ),
+          GoRoute(
+            path: posHistorySales,
+            builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Rekap Penjualan'),
+          ),
+        ],
       ),
+      
+      // Sub-pages that display WITHOUT Bottom Navigation Bar
       GoRoute(
         path: posCart,
-        builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Keranjang Belanja'),
-      ),
-      GoRoute(
-        path: posCheckCard,
-        builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Cek Kartu Siswa'),
-      ),
-      GoRoute(
-        path: posManageProducts,
-        builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Kelola Jajanan'),
+        builder: (BuildContext context, GoRouterState state) => const CartScreen(),
       ),
       GoRoute(
         path: posAddEditProduct,
         builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Form Jajanan'),
-      ),
-      GoRoute(
-        path: posHistorySales,
-        builder: (BuildContext context, GoRouterState state) => const _PlaceholderScreen(title: 'Rekap Penjualan'),
       ),
     ],
   );
@@ -102,6 +115,7 @@ class _PlaceholderScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
+        elevation: 0,
       ),
       body: Center(
         child: Text(
