@@ -19,6 +19,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  int _selectedLoginTab = 0; // 0 for Siswa / Staff, 1 for Orang Tua
 
   @override
   void dispose() {
@@ -33,7 +34,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final String email = _emailController.text.trim();
     final String password = _passwordController.text;
 
-    final bool success = await ref.read(authNotifierProvider.notifier).login(email, password);
+    final bool success = await ref.read(authNotifierProvider.notifier).login(
+          email,
+          password,
+          role: _selectedLoginTab == 1 ? 'parent' : '',
+        );
 
     if (success) {
       if (mounted) {
@@ -211,7 +216,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: <Widget>[
                         // Heading Branding
                         Text(
-                          'Yuk, Masuk!',
+                          _selectedLoginTab == 0 ? 'Yuk, Masuk!' : 'Masuk Orang Tua',
                           style: GoogleFonts.inter(
                             textStyle: const TextStyle(
                               fontSize: 32,
@@ -222,7 +227,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Silakan masuk ke akun Anda untuk memantau saldo, jajan, atau mengelola kantin.',
+                          _selectedLoginTab == 0
+                              ? 'Silakan masuk ke akun Anda untuk memantau saldo, jajan, atau mengelola kantin.'
+                              : 'Pantau jajan, saldo, dan aktivitas anak Anda dengan mudah.',
                           style: GoogleFonts.inter(
                             textStyle: const TextStyle(
                               color: AppColors.textGray,
@@ -231,11 +238,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 32),
 
-                        // Form Input NIS/Email
+                        // Form Input
                         Text(
-                          'Username / NISN / Email',
+                          _selectedLoginTab == 0 ? 'Username / NISN / Email' : 'NISN Anak',
                           style: GoogleFonts.inter(
                             textStyle: const TextStyle(
                               color: AppColors.textDark,
@@ -246,22 +253,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         TextFormField(
                           controller: _emailController,
-                          keyboardType: TextInputType.text,
+                          keyboardType: _selectedLoginTab == 0 ? TextInputType.text : TextInputType.number,
                           style: const TextStyle(fontSize: 16),
-                          decoration: const InputDecoration(
-                            hintText: 'Contoh: petugas, 20260012, atau petugas@sekolah.sch.id',
-                            hintStyle: TextStyle(color: Color(0xFFBDC9C8)),
-                            border: UnderlineInputBorder(
+                          decoration: InputDecoration(
+                            hintText: _selectedLoginTab == 0
+                                ? 'Contoh: petugas, 20260012, atau petugas@sekolah.sch.id'
+                                : 'Contoh: 20260012',
+                            hintStyle: const TextStyle(color: Color(0xFFBDC9C8)),
+                            border: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Color(0xFFBDC9C8)),
                             ),
-                            focusedBorder: UnderlineInputBorder(
+                            focusedBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: AppColors.primary),
                             ),
-                            contentPadding: EdgeInsets.symmetric(vertical: 8),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
                           ),
                           validator: (String? value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Username, NISN, atau Email wajib diisi';
+                              return _selectedLoginTab == 0
+                                  ? 'Username, NISN, atau Email wajib diisi'
+                                  : 'NISN Anak wajib diisi';
+                            }
+                            if (_selectedLoginTab == 1 && !RegExp(r'^\d+$').hasMatch(value.trim())) {
+                              return 'NISN Anak harus berupa angka';
                             }
                             return null;
                           },
@@ -341,7 +355,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                           ),
                         ),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 24),
+
+                        // Pilihan login Orang Tua / Siswa & Staff di bawah
+                        Center(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedLoginTab = _selectedLoginTab == 0 ? 1 : 0;
+                                _emailController.clear();
+                                _passwordController.clear();
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _selectedLoginTab == 0
+                                        ? CupertinoIcons.person_2
+                                        : CupertinoIcons.arrow_left_square,
+                                    size: 16,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _selectedLoginTab == 0
+                                        ? 'Masuk sebagai Orang Tua'
+                                        : 'Kembali ke Login Siswa / Staff',
+                                    style: GoogleFonts.inter(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
 
                         // Catatan Koperasi
                         Center(
@@ -411,52 +473,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 10),
                     
-                    // Petugas
-                    _buildPreviewItem(
-                      roleName: 'KASIR / PETUGAS (USERNAME)',
-                      identifier: 'petugas',
-                      password: 'password123',
-                      onTap: () {
-                        FocusScope.of(context).unfocus();
-                        setState(() {
-                          _emailController.text = 'petugas';
-                          _passwordController.text = 'password123';
-                        });
-                        _showFillSnackBar('Kasir');
-                      },
-                    ),
-                    const Divider(height: 12, color: AppColors.borderLight),
-                    
-                    // Siswa
-                    _buildPreviewItem(
-                      roleName: 'SISWA (AHMAD)',
-                      identifier: '20260012',
-                      password: 'password123',
-                      onTap: () {
-                        FocusScope.of(context).unfocus();
-                        setState(() {
-                          _emailController.text = '20260012';
-                          _passwordController.text = 'password123';
-                        });
-                        _showFillSnackBar('Siswa');
-                      },
-                    ),
-                    const Divider(height: 12, color: AppColors.borderLight),
-                    
-                    // Orang Tua
-                    _buildPreviewItem(
-                      roleName: 'ORANG TUA (WALI AHMAD)',
-                      identifier: '20260012',
-                      password: 'parent123',
-                      onTap: () {
-                        FocusScope.of(context).unfocus();
-                        setState(() {
-                          _emailController.text = '20260012';
-                          _passwordController.text = 'parent123';
-                        });
-                        _showFillSnackBar('Orang Tua');
-                      },
-                    ),
+                    if (_selectedLoginTab == 0) ...[
+                      // Petugas
+                      _buildPreviewItem(
+                        roleName: 'KASIR / PETUGAS (USERNAME)',
+                        identifier: 'petugas',
+                        password: 'password123',
+                        onTap: () {
+                          FocusScope.of(context).unfocus();
+                          setState(() {
+                            _emailController.text = 'petugas';
+                            _passwordController.text = 'password123';
+                          });
+                          _showFillSnackBar('Kasir');
+                        },
+                      ),
+                      const Divider(height: 12, color: AppColors.borderLight),
+                      
+                      // Siswa
+                      _buildPreviewItem(
+                        roleName: 'SISWA (AHMAD - NISN)',
+                        identifier: '20260012',
+                        password: 'password123',
+                        onTap: () {
+                          FocusScope.of(context).unfocus();
+                          setState(() {
+                            _emailController.text = '20260012';
+                            _passwordController.text = 'password123';
+                          });
+                          _showFillSnackBar('Siswa');
+                        },
+                      ),
+                    ] else ...[
+                      // Orang Tua
+                      _buildPreviewItem(
+                        roleName: 'ORANG TUA (WALI AHMAD - NISN)',
+                        identifier: '20260012',
+                        password: 'parent123',
+                        onTap: () {
+                          FocusScope.of(context).unfocus();
+                          setState(() {
+                            _emailController.text = '20260012';
+                            _passwordController.text = 'parent123';
+                          });
+                          _showFillSnackBar('Orang Tua');
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -13,8 +13,17 @@ class AuthService {
     String expectedRole = '',
   }) async {
     try {
-      String queryEmail = email.trim().toLowerCase();
+      final String rawInput = email.trim();
+      String queryEmail = rawInput.toLowerCase();
       
+      // Validation for parent expected role: must be a numeric NISN
+      if (expectedRole == 'parent') {
+        final isNumeric = RegExp(r'^\d+$').hasMatch(rawInput);
+        if (!isNumeric) {
+          throw Exception('Akses ditolak: Orang Tua hanya dapat masuk menggunakan NISN Anak (angka).');
+        }
+      }
+
       // If it looks like a NIS (numeric or doesn't have @), append domain suffix
       if (!queryEmail.contains('@')) {
         queryEmail = '$queryEmail@sekolah.sch.id';
@@ -22,8 +31,8 @@ class AuthService {
 
       // Mock Parent Account
       if ((queryEmail == '20260012@sekolah.sch.id' || queryEmail == 'orangtua@sekolah.sch.id') && password == 'parent123') {
-        if (expectedRole.isNotEmpty && expectedRole != 'parent') {
-          throw Exception('Akses ditolak: Hak akses tidak sesuai.');
+        if (expectedRole != 'parent') {
+          throw Exception('Akses ditolak: Silakan gunakan tab login Orang Tua.');
         }
         final parentProfile = {
           'id': 'parent-id-wali-ahmad',
@@ -36,20 +45,36 @@ class AuthService {
         return parentProfile;
       }
 
-      // Query profiles directly
-      final Map<String, dynamic>? profile = await _client
-          .from('profiles')
-          .select()
-          .eq('email', queryEmail)
-          .eq('password', password)
-          .maybeSingle();
+      Map<String, dynamic>? profile;
+      try {
+        // Query profiles: try matching email, username, or nisn
+        profile = await _client
+            .from('profiles')
+            .select()
+            .or('email.eq.$queryEmail,username.eq.$rawInput,nisn.eq.$rawInput')
+            .eq('password', password)
+            .maybeSingle();
+      } catch (e) {
+        // Graceful fallback if username or nisn columns don't exist yet
+        profile = await _client
+            .from('profiles')
+            .select()
+            .eq('email', queryEmail)
+            .eq('password', password)
+            .maybeSingle();
+      }
 
       if (profile == null) {
-        throw Exception('Email/NIS atau kata sandi salah.');
+        throw Exception('Email/Username/NISN atau kata sandi salah.');
       }
 
       final String role = profile['role'] ?? '';
       
+      // Prevent parent login on general siswa/staff tab
+      if (role == 'parent' && expectedRole != 'parent') {
+        throw Exception('Akses ditolak: Silakan gunakan pilihan login Orang Tua.');
+      }
+
       // Authorization check: must match expected role if provided
       if (expectedRole.isNotEmpty && role != expectedRole) {
         if (expectedRole == 'petugas_kantin') {
