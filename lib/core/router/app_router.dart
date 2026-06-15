@@ -12,7 +12,6 @@ import 'package:kantin_digital/features/kantin/screens/sales_history_screen.dart
 import 'package:kantin_digital/features/kantin/widgets/kantin_main_layout.dart';
 
 import 'package:kantin_digital/features/siswa/screens/student_welcome_screen.dart';
-import 'package:kantin_digital/features/siswa/screens/student_login_screen.dart';
 import 'package:kantin_digital/features/siswa/screens/siswa_dashboard_screen.dart';
 import 'package:kantin_digital/features/siswa/screens/siswa_topup_screen.dart';
 import 'package:kantin_digital/features/siswa/screens/siswa_history_screen.dart';
@@ -20,7 +19,6 @@ import 'package:kantin_digital/features/siswa/screens/siswa_cards_screen.dart';
 import 'package:kantin_digital/features/siswa/screens/siswa_profile_screen.dart';
 import 'package:kantin_digital/features/siswa/screens/siswa_notifications_screen.dart';
 import 'package:kantin_digital/features/siswa/widgets/siswa_main_layout.dart';
-import 'package:kantin_digital/features/parent/screens/parent_login_screen.dart';
 import 'package:kantin_digital/features/parent/screens/parent_dashboard_screen.dart';
 import 'package:kantin_digital/features/parent/screens/parent_topup_screen.dart';
 import 'package:kantin_digital/features/parent/screens/parent_receipt_screen.dart';
@@ -75,13 +73,13 @@ class AppRouter {
       ),
       GoRoute(
         path: studentLogin,
-        builder: (BuildContext context, GoRouterState state) => const StudentLoginScreen(),
+        builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
       ),
 
       // Parent Routes
       GoRoute(
         path: parentHome,
-        builder: (BuildContext context, GoRouterState state) => const ParentLoginScreen(),
+        builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
       ),
       GoRoute(
         path: parentDashboard,

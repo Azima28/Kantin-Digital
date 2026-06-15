@@ -10,15 +10,20 @@ class AuthService {
   Future<Map<String, dynamic>> signIn({
     required String email,
     required String password,
-    String expectedRole = 'petugas_kantin',
+    String expectedRole = '',
   }) async {
     try {
       String queryEmail = email.trim().toLowerCase();
       
+      // If it looks like a NIS (numeric or doesn't have @), append domain suffix
+      if (!queryEmail.contains('@')) {
+        queryEmail = '$queryEmail@sekolah.sch.id';
+      }
+
       // Mock Parent Account
-      if ((queryEmail == '20260012' || queryEmail == '20260012@sekolah.sch.id') && password == 'parent123') {
-        if (expectedRole != 'parent') {
-          throw Exception('Akun ini adalah akun Orang Tua. Silakan masuk melalui Portal Orang Tua.');
+      if (queryEmail == '20260012@sekolah.sch.id' && password == 'parent123') {
+        if (expectedRole.isNotEmpty && expectedRole != 'parent') {
+          throw Exception('Akses ditolak: Hak akses tidak sesuai.');
         }
         final parentProfile = {
           'id': 'parent-id-wali-ahmad',
@@ -29,11 +34,6 @@ class AuthService {
         };
         _currentProfile = parentProfile;
         return parentProfile;
-      }
-
-      // If it looks like a NIS (numeric or doesn't have @), append domain suffix for students
-      if (expectedRole == 'student' && !queryEmail.contains('@')) {
-        queryEmail = '$queryEmail@sekolah.sch.id';
       }
 
       // Query profiles directly
@@ -50,8 +50,8 @@ class AuthService {
 
       final String role = profile['role'] ?? '';
       
-      // Authorization check: must match expected role
-      if (role != expectedRole) {
+      // Authorization check: must match expected role if provided
+      if (expectedRole.isNotEmpty && role != expectedRole) {
         if (expectedRole == 'petugas_kantin') {
           throw Exception('Akses ditolak: Hanya petugas/operator kantin yang dapat masuk ke Kasir.');
         } else if (expectedRole == 'student') {

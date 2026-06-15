@@ -58,102 +58,7 @@ class _StudentWelcomeScreenState extends State<StudentWelcomeScreen>
             ),
           ),
 
-          // Canteen Operator Account Preview Overlay (Top Left)
-          Positioned(
-            top: 16,
-            left: 16,
-            child: SafeArea(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderLight, width: 0.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'PREVIEW PETUGAS',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textGray,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'petugas@sekolah.sch.id',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const Text(
-                      'Sandi: password123',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppColors.textGray,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: () => context.go('/login'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Text(
-                              'Masuk Kasir',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            SizedBox(width: 2),
-                            Icon(
-                              CupertinoIcons.chevron_right,
-                              size: 8,
-                              color: AppColors.primary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+
 
           // Main content
           SafeArea(
@@ -300,7 +205,7 @@ class _StudentWelcomeScreenState extends State<StudentWelcomeScreen>
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            context.push('/student/login');
+                            context.push('/login');
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -336,7 +241,7 @@ class _StudentWelcomeScreenState extends State<StudentWelcomeScreen>
                         width: double.infinity,
                         child: OutlinedButton(
                           onPressed: () {
-                            context.push('/parent');
+                            context.push('/login');
                           },
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.primary, width: 1.5),

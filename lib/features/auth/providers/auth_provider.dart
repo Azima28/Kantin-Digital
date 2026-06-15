@@ -74,7 +74,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   // Fungsi Login
-  Future<bool> login(String email, String password, {String role = 'petugas_kantin'}) async {
+  Future<bool> login(String email, String password, {String role = ''}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final Map<String, dynamic> profile = await _authService.signIn(
