@@ -16,7 +16,7 @@ class AuthService {
       String queryEmail = email.trim().toLowerCase();
       
       // Mock Parent Account
-      if (queryEmail == 'orangtua@sekolah.sch.id' && password == 'parent123') {
+      if ((queryEmail == '20260012' || queryEmail == '20260012@sekolah.sch.id') && password == 'parent123') {
         final parentProfile = {
           'id': 'parent-id-wali-ahmad',
           'email': 'orangtua@sekolah.sch.id',

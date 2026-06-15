@@ -128,7 +128,7 @@ class _ParentLoginScreenState extends ConsumerState<ParentLoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Masuk menggunakan email dan kata sandi orang tua untuk memantau anak.',
+                          'Masuk menggunakan NISN anak dan kata sandi orang tua untuk memantau anak.',
                           style: GoogleFonts.inter(
                             textStyle: const TextStyle(
                               fontSize: 14,
@@ -138,9 +138,9 @@ class _ParentLoginScreenState extends ConsumerState<ParentLoginScreen> {
                         ),
                         const SizedBox(height: 48),
 
-                        // Email Field
+                        // NISN Field
                         Text(
-                          'Email Orang Tua',
+                          'NISN Siswa / Anak',
                           style: GoogleFonts.inter(
                             textStyle: const TextStyle(
                               fontSize: 13,
@@ -151,10 +151,10 @@ class _ParentLoginScreenState extends ConsumerState<ParentLoginScreen> {
                         ),
                         TextFormField(
                           controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: TextInputType.number,
                           style: const TextStyle(fontSize: 16),
                           decoration: const InputDecoration(
-                            hintText: 'orangtua@sekolah.sch.id',
+                            hintText: '20260012',
                             hintStyle: TextStyle(color: Color(0xFFBDC9C8)),
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Color(0xFFBDC9C8)),
@@ -166,7 +166,7 @@ class _ParentLoginScreenState extends ConsumerState<ParentLoginScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Email wajib diisi';
+                              return 'NISN wajib diisi';
                             }
                             return null;
                           },
@@ -302,7 +302,7 @@ class _ParentLoginScreenState extends ConsumerState<ParentLoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'orangtua@sekolah.sch.id',
+                      'NISN: 20260012',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -320,7 +320,7 @@ class _ParentLoginScreenState extends ConsumerState<ParentLoginScreen> {
                     GestureDetector(
                       onTap: () {
                         setState(() {
-                          _emailController.text = 'orangtua@sekolah.sch.id';
+                          _emailController.text = '20260012';
                           _passwordController.text = 'parent123';
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
