@@ -124,35 +124,40 @@ class _CheckCardScreenState extends ConsumerState<CheckCardScreen> {
           bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            
-            if (_isLoading) ...[
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: CupertinoActivityIndicator(radius: 16),
-                ),
-              ),
-            ] else if (_studentData != null) ...[
-              // Card Details View
-              _buildStudentCardView(_studentData!),
-            ] else if (_errorMessage != null && !_errorMessage!.startsWith('Hardware NFC')) ...[
-              // Error view
-              _buildErrorView(),
-            ] else ...[
-              // Scanning Idle view
-              _buildScanningView(),
-            ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                
+                if (_isLoading) ...[
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CupertinoActivityIndicator(radius: 16),
+                    ),
+                  ),
+                ] else if (_studentData != null) ...[
+                  // Card Details View
+                  _buildStudentCardView(_studentData!),
+                ] else if (_errorMessage != null && !_errorMessage!.startsWith('Hardware NFC')) ...[
+                  // Error view
+                  _buildErrorView(),
+                ] else ...[
+                  // Scanning Idle view
+                  _buildScanningView(),
+                ],
 
-            const SizedBox(height: 40),
+                const SizedBox(height: 40),
 
-            // Simulator Panel
-            _buildSimulatorPanel(),
-          ],
+                // Simulator Panel
+                _buildSimulatorPanel(),
+              ],
+            ),
+          ),
         ),
       ),
     );

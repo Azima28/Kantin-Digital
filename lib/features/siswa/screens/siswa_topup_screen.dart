@@ -311,11 +311,14 @@ class _SiswaTopUpScreenState extends ConsumerState<SiswaTopUpScreen> {
           bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
         ),
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Quick nominal title
@@ -329,14 +332,14 @@ class _SiswaTopUpScreenState extends ConsumerState<SiswaTopUpScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Grid 2x2 nominal
+                // Grid nominal
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
+                  crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 2.2,
+                  childAspectRatio: MediaQuery.of(context).size.width > 600 ? 3.0 : 2.2,
                   children: [
                     _buildQuickAmountItem(10000, '10k', 'Rp 10.000'),
                     _buildQuickAmountItem(20000, '20k', 'Rp 20.000'),
@@ -538,8 +541,10 @@ class _SiswaTopUpScreenState extends ConsumerState<SiswaTopUpScreen> {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
+     ),
     );
   }
 

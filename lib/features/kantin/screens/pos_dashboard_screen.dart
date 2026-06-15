@@ -77,8 +77,11 @@ class _PosDashboardScreenState extends ConsumerState<PosDashboardScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: Stack(
+            children: [
           RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(posProductsProvider);
@@ -222,8 +225,14 @@ class _PosDashboardScreenState extends ConsumerState<PosDashboardScreen> {
                     return SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: MediaQuery.of(context).size.width > 1200
+                              ? 6
+                              : MediaQuery.of(context).size.width > 900
+                                  ? 5
+                                  : MediaQuery.of(context).size.width > 600
+                                      ? 3
+                                      : 2,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                           childAspectRatio: 0.8,
@@ -462,6 +471,8 @@ class _PosDashboardScreenState extends ConsumerState<PosDashboardScreen> {
             ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 }

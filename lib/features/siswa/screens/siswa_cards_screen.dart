@@ -109,183 +109,188 @@ class SiswaCardsScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(siswaStudentProvider);
         },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24.0),
-          child: studentAsync.when(
-            data: (student) {
-              if (student == null) {
-                return const Center(child: Text('Data kartu tidak tersedia.'));
-              }
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24.0),
+              child: studentAsync.when(
+                data: (student) {
+                  if (student == null) {
+                    return const Center(child: Text('Data kartu tidak tersedia.'));
+                  }
 
-              final String rfidUid = student['rfid_uid'] ?? 'BELUM DIHUBUNGKAN';
-              final String studentClass = student['class'] ?? '8-B';
-              final bool isActive = student['is_active'] ?? true;
-              final String studentId = student['id'];
+                  final String rfidUid = student['rfid_uid'] ?? 'BELUM DIHUBUNGKAN';
+                  final String studentClass = student['class'] ?? '8-B';
+                  final bool isActive = student['is_active'] ?? true;
+                  final String studentId = student['id'];
 
-              return Column(
-                children: [
-                  const SizedBox(height: 10),
+                  return Column(
+                    children: [
+                      const SizedBox(height: 10),
 
-                  // RFID Card Replica Widget (Primary Teal color with Squircle design)
-                  Container(
-                    width: double.infinity,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, Color(0xFF008282)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'KARTU SISWA DIGITAL',
-                              style: GoogleFonts.inter(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            const Icon(
-                              CupertinoIcons.wifi,
-                              color: Colors.white,
-                              size: 20,
+                      // RFID Card Replica Widget (Primary Teal color with Squircle design)
+                      Container(
+                        width: double.infinity,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppColors.primary, Color(0xFF008282)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
-                        Column(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              fullName,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'KARTU SISWA DIGITAL',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                const Icon(
+                                  CupertinoIcons.wifi,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'NIS: $nis \u2022 Kelas $studentClass',
-                              style: GoogleFonts.inter(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  fullName,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'NIS: $nis \u2022 Kelas $studentClass',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'UID: $rfidUid',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isActive ? Colors.white.withValues(alpha: 0.25) : Colors.red.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    isActive ? 'Aktif' : 'Beku',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ),
+
+                      const SizedBox(height: 36),
+
+                      // IOS List Group
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.borderLight, width: 0.5),
+                        ),
+                        child: Column(
                           children: [
-                            Text(
-                              'UID: $rfidUid',
-                              style: GoogleFonts.inter(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isActive ? Colors.white.withValues(alpha: 0.25) : Colors.red.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                isActive ? 'Aktif' : 'Beku',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              leading: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: isActive ? AppColors.primaryLight : AppColors.errorLight,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isActive ? CupertinoIcons.lock : CupertinoIcons.lock_open,
+                                  color: isActive ? AppColors.primary : AppColors.error,
+                                  size: 16,
                                 ),
                               ),
+                              title: const Text(
+                                'Bekukan Sementara',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Kunci kartu agar tidak bisa digunakan jajan.',
+                                style: TextStyle(fontSize: 11, color: AppColors.textGray),
+                              ),
+                              trailing: CupertinoSwitch(
+                                value: !isActive,
+                                activeTrackColor: AppColors.primary,
+                                onChanged: (bool val) {
+                                  _toggleCardStatus(context, ref, studentId, isActive);
+                                },
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: CupertinoActivityIndicator(),
                   ),
-
-                  const SizedBox(height: 36),
-
-                  // IOS List Group
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.borderLight, width: 0.5),
-                    ),
-                    child: Column(
-                      children: [
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          leading: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: isActive ? AppColors.primaryLight : AppColors.errorLight,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isActive ? CupertinoIcons.lock : CupertinoIcons.lock_open,
-                              color: isActive ? AppColors.primary : AppColors.error,
-                              size: 16,
-                            ),
-                          ),
-                          title: const Text(
-                            'Bekukan Sementara',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                          subtitle: const Text(
-                            'Kunci kartu agar tidak bisa digunakan jajan.',
-                            style: TextStyle(fontSize: 11, color: AppColors.textGray),
-                          ),
-                          trailing: CupertinoSwitch(
-                            value: !isActive,
-                            activeTrackColor: AppColors.primary,
-                            onChanged: (bool val) {
-                              _toggleCardStatus(context, ref, studentId, isActive);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                error: (err, stack) => Center(
+                  child: Text(
+                    'Gagal memuat status kartu: $err',
+                    style: const TextStyle(color: AppColors.error),
                   ),
-                ],
-              );
-            },
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: CupertinoActivityIndicator(),
-              ),
-            ),
-            error: (err, stack) => Center(
-              child: Text(
-                'Gagal memuat status kartu: $err',
-                style: const TextStyle(color: AppColors.error),
+                ),
               ),
             ),
           ),

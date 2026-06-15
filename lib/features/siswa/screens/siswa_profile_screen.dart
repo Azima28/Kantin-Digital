@@ -182,107 +182,112 @@ class SiswaProfileScreen extends ConsumerWidget {
         data: (student) {
           final String studentClass = student?['class'] ?? '8-B';
 
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                // Profile avatar header section
-                Container(
-                  color: AppColors.cardBackground,
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(0xFFE5E5EA),
-                        ),
-                        child: ClipOval(
-                          child: Image.network(
-                            avatarUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(CupertinoIcons.person, color: AppColors.primary, size: 40),
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Profile avatar header section
+                    Container(
+                      color: AppColors.cardBackground,
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFE5E5EA),
+                            ),
+                            child: ClipOval(
+                              child: Image.network(
+                                avatarUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(CupertinoIcons.person, color: AppColors.primary, size: 40),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Text(
+                            fullName,
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'NIS: $nis \u2022 Kelas $studentClass',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textGray,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        fullName,
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'NIS: $nis \u2022 Kelas $studentClass',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textGray,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Section 1: Kontak Orang Tua
-                _buildSectionHeader('KONTAK ORANG TUA'),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      top: BorderSide(color: AppColors.borderLight, width: 0.5),
-                      bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Email', 'budi.subarjo@gmail.com', isFirst: true),
-                      _buildInfoRow('No. HP', '08123456789', isLast: true),
-                    ],
-                  ),
-                ),
+                    const SizedBox(height: 24),
 
-                const SizedBox(height: 24),
-
-                // Section 2: Keamanan & Akses
-                _buildSectionHeader('KEAMANAN & AKSES'),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      top: BorderSide(color: AppColors.borderLight, width: 0.5),
-                      bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
+                    // Section 1: Kontak Orang Tua
+                    _buildSectionHeader('KONTAK ORANG TUA'),
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(
+                          top: BorderSide(color: AppColors.borderLight, width: 0.5),
+                          bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildInfoRow('Email', 'budi.subarjo@gmail.com', isFirst: true),
+                          _buildInfoRow('No. HP', '08123456789', isLast: true),
+                        ],
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildActionRow(
-                        context,
-                        'Ubah Sandi Akun',
-                        CupertinoIcons.chevron_right,
-                        onTap: () => _showChangePasswordDialog(context, ref),
-                        isFirst: true,
+
+                    const SizedBox(height: 24),
+
+                    // Section 2: Keamanan & Akses
+                    _buildSectionHeader('KEAMANAN & AKSES'),
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(
+                          top: BorderSide(color: AppColors.borderLight, width: 0.5),
+                          bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
+                        ),
                       ),
-                      _buildActionRow(
-                        context,
-                        'Keluar dari Akun',
-                        CupertinoIcons.chevron_right,
-                        textColor: AppColors.error,
-                        onTap: () => _handleLogout(context, ref),
-                        isLast: true,
+                      child: Column(
+                        children: [
+                          _buildActionRow(
+                            context,
+                            'Ubah Sandi Akun',
+                            CupertinoIcons.chevron_right,
+                            onTap: () => _showChangePasswordDialog(context, ref),
+                            isFirst: true,
+                          ),
+                          _buildActionRow(
+                            context,
+                            'Keluar dari Akun',
+                            CupertinoIcons.chevron_right,
+                            textColor: AppColors.error,
+                            onTap: () => _handleLogout(context, ref),
+                            isLast: true,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                const SizedBox(height: 40),
-              ],
+              ),
             ),
           );
         },

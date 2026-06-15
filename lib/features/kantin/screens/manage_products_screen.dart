@@ -120,258 +120,263 @@ class ManageProductsScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(manageProductsProvider);
         },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // Top CTA Button to Add Product
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      context.push('/pos/products/form');
-                    },
-                    icon: const Icon(CupertinoIcons.add, color: Colors.white, size: 18),
-                    label: const Text(
-                      AppStrings.buttonAddProduct,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // Top CTA Button to Add Product
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          context.push('/pos/products/form');
+                        },
+                        icon: const Icon(CupertinoIcons.add, color: Colors.white, size: 18),
+                        label: const Text(
+                          AppStrings.buttonAddProduct,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
 
-            // Products list
-            productsAsync.when(
-              data: (List<Map<String, dynamic>> products) {
-                if (products.isEmpty) {
-                  return SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(CupertinoIcons.tray_fill, size: 48, color: AppColors.textGray),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Belum ada jajanan',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Gunakan tombol di atas untuk menambahkan produk jualan stan Anda.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppColors.textGray, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                return SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final product = products[index];
-                        final String id = product['id']?.toString() ?? '';
-                        final String name = product['name']?.toString() ?? 'Jajanan';
-                        final String category = product['category']?.toString() ?? 'makanan';
-                        final double price = double.tryParse(product['price'].toString()) ?? 0.0;
-                        final bool isAvailable = product['is_available'] ?? true;
-                        final String? imageUrl = product['image_url']?.toString();
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardBackground,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.borderLight, width: 0.5),
-                          ),
-                          child: Row(
-                            children: [
-                              // Product Thumbnail/Emoji
-                              Container(
-                                width: 54,
-                                height: 54,
-                                decoration: BoxDecoration(
-                                  color: AppColors.systemBackground,
-                                  borderRadius: BorderRadius.circular(10),
+                // Products list
+                productsAsync.when(
+                  data: (List<Map<String, dynamic>> products) {
+                    if (products.isEmpty) {
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(40),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(CupertinoIcons.tray_fill, size: 48, color: AppColors.textGray),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Belum ada jajanan',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                                 ),
-                                child: imageUrl != null && imageUrl.isNotEmpty
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Image.network(
-                                          imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Center(
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Gunakan tombol di atas untuk menambahkan produk jualan stan Anda.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: AppColors.textGray, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final product = products[index];
+                            final String id = product['id']?.toString() ?? '';
+                            final String name = product['name']?.toString() ?? 'Jajanan';
+                            final String category = product['category']?.toString() ?? 'makanan';
+                            final double price = double.tryParse(product['price'].toString()) ?? 0.0;
+                            final bool isAvailable = product['is_available'] ?? true;
+                            final String? imageUrl = product['image_url']?.toString();
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: AppColors.borderLight, width: 0.5),
+                              ),
+                              child: Row(
+                                children: [
+                                  // Product Thumbnail/Emoji
+                                  Container(
+                                    width: 54,
+                                    height: 54,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.systemBackground,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: imageUrl != null && imageUrl.isNotEmpty
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(10),
+                                            child: Image.network(
+                                              imageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => Center(
+                                                child: Text(
+                                                  category.toLowerCase() == 'makanan' ? '🍔' : '🍹',
+                                                  style: const TextStyle(fontSize: 24),
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Center(
                                             child: Text(
                                               category.toLowerCase() == 'makanan' ? '🍔' : '🍹',
                                               style: const TextStyle(fontSize: 24),
                                             ),
                                           ),
-                                        ),
-                                      )
-                                    : Center(
-                                        child: Text(
-                                          category.toLowerCase() == 'makanan' ? '🍔' : '🍹',
-                                          style: const TextStyle(fontSize: 24),
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 12),
-
-                              // Info Column
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      name,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textDark,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      category.toUpperCase(),
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.textGray,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      CurrencyFormatter.format(price),
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              // Availability Control & CRUD Edit/Delete Actions
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        isAvailable ? 'Tersedia' : 'Habis',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: isAvailable ? AppColors.primary : AppColors.error,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Transform.scale(
-                                        scale: 0.75,
-                                        alignment: Alignment.centerRight,
-                                        child: CupertinoSwitch(
-                                          value: isAvailable,
-                                          activeTrackColor: AppColors.primary,
-                                          onChanged: (bool val) =>
-                                              _toggleProductAvailability(context, ref, id, val),
-                                        ),
-                                      ),
-                                    ],
                                   ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      // Edit Button
-                                      GestureDetector(
-                                        onTap: () {
-                                          context.push('/pos/products/form', extra: product);
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.all(6),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.systemBackground,
-                                            borderRadius: BorderRadius.circular(6),
+                                  const SizedBox(width: 12),
+
+                                  // Info Column
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textDark,
                                           ),
-                                          child: const Icon(
-                                            CupertinoIcons.pencil,
-                                            size: 14,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          category.toUpperCase(),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.textGray,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          CurrencyFormatter.format(price),
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
                                             color: AppColors.primary,
                                           ),
                                         ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Availability Control & CRUD Edit/Delete Actions
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            isAvailable ? 'Tersedia' : 'Habis',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: isAvailable ? AppColors.primary : AppColors.error,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Transform.scale(
+                                            scale: 0.75,
+                                            alignment: Alignment.centerRight,
+                                            child: CupertinoSwitch(
+                                              value: isAvailable,
+                                              activeTrackColor: AppColors.primary,
+                                              onChanged: (bool val) =>
+                                                  _toggleProductAvailability(context, ref, id, val),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 8),
-                                      // Delete Button
-                                      GestureDetector(
-                                        onTap: () => _deleteProduct(context, ref, id, name),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(6),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.errorLight,
-                                            borderRadius: BorderRadius.circular(6),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          // Edit Button
+                                          GestureDetector(
+                                            onTap: () {
+                                              context.push('/pos/products/form', extra: product);
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.systemBackground,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Icon(
+                                                CupertinoIcons.pencil,
+                                                size: 14,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
                                           ),
-                                          child: const Icon(
-                                            CupertinoIcons.trash,
-                                            size: 14,
-                                            color: AppColors.error,
+                                          const SizedBox(width: 8),
+                                          // Delete Button
+                                          GestureDetector(
+                                            onTap: () => _deleteProduct(context, ref, id, name),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.errorLight,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Icon(
+                                                CupertinoIcons.trash,
+                                                size: 14,
+                                                color: AppColors.error,
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                      childCount: products.length,
+                            );
+                          },
+                          childCount: products.length,
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const SliverFillRemaining(
+                    child: Center(
+                      child: CupertinoActivityIndicator(radius: 12),
                     ),
                   ),
-                );
-              },
-              loading: () => const SliverFillRemaining(
-                child: Center(
-                  child: CupertinoActivityIndicator(radius: 12),
-                ),
-              ),
-              error: (err, stack) => SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'Gagal memuat daftar produk: $err',
-                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                  error: (err, stack) => SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text(
+                          'Gagal memuat daftar produk: $err',
+                          style: const TextStyle(color: AppColors.error, fontSize: 13),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

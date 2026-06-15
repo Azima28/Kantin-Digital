@@ -214,204 +214,209 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Input Nama Jajanan
-                Text(
-                  AppStrings.labelProductName,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                TextFormField(
-                  controller: _nameController,
-                  style: const TextStyle(fontSize: 16),
-                  decoration: const InputDecoration(
-                    hintText: 'Contoh: Nasi Goreng Gila',
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  validator: (String? value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Nama jajanan wajib diisi';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 28),
-
-                // Input Harga Jajanan
-                Text(
-                  AppStrings.labelProductPrice,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                TextFormField(
-                  controller: _priceController,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(fontSize: 16),
-                  decoration: const InputDecoration(
-                    prefixText: 'Rp ',
-                    hintText: '12000',
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  validator: (String? value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Harga jajanan wajib diisi';
-                    }
-                    final double? val = double.tryParse(value);
-                    if (val == null || val <= 0) {
-                      return 'Masukkan nominal harga yang valid';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 28),
-
-                // Kategori Selector (Cupertino style)
-                Text(
-                  AppStrings.labelProductCategory,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: CupertinoSegmentedControl<String>(
-                    groupValue: _selectedCategory,
-                    selectedColor: AppColors.primary,
-                    unselectedColor: AppColors.systemBackground,
-                    borderColor: AppColors.borderLight,
-                    pressedColor: AppColors.primaryLight,
-                    children: const <String, Widget>{
-                      'makanan': Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Text(
-                          AppStrings.categoryFood,
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      'minuman': Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Text(
-                          AppStrings.categoryDrink,
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    },
-                    onValueChanged: (String val) {
-                      setState(() {
-                        _selectedCategory = val;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(height: 28),
-
-                // Upload Gambar Produk
-                Text(
-                  'Gambar Produk (Opsional)',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Container(
-                    width: double.infinity,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: AppColors.systemBackground,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.borderLight,
-                        width: 0.5,
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Input Nama Jajanan
+                    Text(
+                      AppStrings.labelProductName,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
-                    child: _imageFile != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: kIsWeb
-                                ? Image.network(
-                                    _imageFile!.path,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.file(
-                                    File(_imageFile!.path),
-                                    fit: BoxFit.cover,
-                                  ),
-                          )
-                        : showExistingImage
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  widget.initialProduct!['image_url'].toString(),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
-                                ),
-                              )
-                            : _buildUploadPlaceholder(),
-                  ),
-                ),
-                if (_imageFile != null || showExistingImage) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.error,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 0),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: _removeImage,
-                        icon: const Icon(CupertinoIcons.trash, size: 14),
-                        label: const Text('Hapus Gambar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    TextFormField(
+                      controller: _nameController,
+                      style: const TextStyle(fontSize: 16),
+                      decoration: const InputDecoration(
+                        hintText: 'Contoh: Nasi Goreng Gila',
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
                       ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 48),
-
-                // Simpan Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSave,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      elevation: 0,
+                      validator: (String? value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Nama jajanan wajib diisi';
+                        }
+                        return null;
+                      },
                     ),
-                    child: _isLoading
-                        ? const CupertinoActivityIndicator(color: Colors.white)
-                        : Text(
-                            AppStrings.buttonSaveProduct.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
+                    const SizedBox(height: 28),
+
+                    // Input Harga Jajanan
+                    Text(
+                      AppStrings.labelProductPrice,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    TextFormField(
+                      controller: _priceController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 16),
+                      decoration: const InputDecoration(
+                        prefixText: 'Rp ',
+                        hintText: '12000',
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      validator: (String? value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Harga jajanan wajib diisi';
+                        }
+                        final double? val = double.tryParse(value);
+                        if (val == null || val <= 0) {
+                          return 'Masukkan nominal harga yang valid';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Kategori Selector (Cupertino style)
+                    Text(
+                      AppStrings.labelProductCategory,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: CupertinoSegmentedControl<String>(
+                        groupValue: _selectedCategory,
+                        selectedColor: AppColors.primary,
+                        unselectedColor: AppColors.systemBackground,
+                        borderColor: AppColors.borderLight,
+                        pressedColor: AppColors.primaryLight,
+                        children: const <String, Widget>{
+                          'makanan': Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              AppStrings.categoryFood,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                           ),
-                  ),
+                          'minuman': Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              AppStrings.categoryDrink,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        },
+                        onValueChanged: (String val) {
+                          setState(() {
+                            _selectedCategory = val;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Upload Gambar Produk
+                    Text(
+                      'Gambar Produk (Opsional)',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.textDark,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: double.infinity,
+                        height: 180,
+                        decoration: BoxDecoration(
+                          color: AppColors.systemBackground,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.borderLight,
+                            width: 0.5,
+                          ),
+                        ),
+                        child: _imageFile != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: kIsWeb
+                                    ? Image.network(
+                                        _imageFile!.path,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.file(
+                                        File(_imageFile!.path),
+                                        fit: BoxFit.cover,
+                                      ),
+                              )
+                            : showExistingImage
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.network(
+                                      widget.initialProduct!['image_url'].toString(),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
+                                    ),
+                                  )
+                                : _buildUploadPlaceholder(),
+                      ),
+                    ),
+                    if (_imageFile != null || showExistingImage) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(0, 0),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: _removeImage,
+                            icon: const Icon(CupertinoIcons.trash, size: 14),
+                            label: const Text('Hapus Gambar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 48),
+
+                    // Simpan Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _handleSave,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const CupertinoActivityIndicator(color: Colors.white)
+                            : Text(
+                                AppStrings.buttonSaveProduct.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

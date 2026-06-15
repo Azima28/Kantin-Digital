@@ -253,220 +253,225 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
         onRefresh: () async {
           ref.invalidate(siswaTransactionsProvider);
         },
-        child: Column(
-          children: [
-            // Search Bar & Filters Header Container
-            Container(
-              color: AppColors.cardBackground,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                children: [
-                  // Search Bar Input
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE9E9EB),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                    child: Row(
-                      children: [
-                        const Icon(CupertinoIcons.search, color: AppColors.textGray, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                            decoration: const InputDecoration(
-                              hintText: 'Cari nama stan jajan...',
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              fillColor: Colors.transparent,
-                              filled: false,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val.trim().toLowerCase();
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Pill segmented filter (Semua, Jajan, Top-Up)
-                  Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                // Search Bar & Filters Header Container
+                Container(
+                  color: AppColors.cardBackground,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
                     children: [
-                      _buildFilterPill(0, 'Semua'),
-                      const SizedBox(width: 8),
-                      _buildFilterPill(1, 'Jajan'),
-                      const SizedBox(width: 8),
-                      _buildFilterPill(2, 'Top-Up'),
+                      // Search Bar Input
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE9E9EB),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        child: Row(
+                          children: [
+                            const Icon(CupertinoIcons.search, color: AppColors.textGray, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                                decoration: const InputDecoration(
+                                  hintText: 'Cari nama stan jajan...',
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  fillColor: Colors.transparent,
+                                  filled: false,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _searchQuery = val.trim().toLowerCase();
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Pill segmented filter (Semua, Jajan, Top-Up)
+                      Row(
+                        children: [
+                          _buildFilterPill(0, 'Semua'),
+                          const SizedBox(width: 8),
+                          _buildFilterPill(1, 'Jajan'),
+                          const SizedBox(width: 8),
+                          _buildFilterPill(2, 'Top-Up'),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            // History Transactions Grouped List
-            Expanded(
-              child: transactionsAsync.when(
-                data: (List<Map<String, dynamic>> txs) {
-                  // Apply filter & search
-                  final filteredTxs = txs.where((tx) {
-                    final String type = tx['type']?.toString() ?? 'purchase';
-                    final String canteenName = (tx['canteen_operators']?['canteen_name'] ?? 'Kantin').toString().toLowerCase();
-                    
-                    // Filter match
-                    if (_selectedFilterIndex == 1 && type != 'purchase') return false;
-                    if (_selectedFilterIndex == 2 && type != 'topup') return false;
+                // History Transactions Grouped List
+                Expanded(
+                  child: transactionsAsync.when(
+                    data: (List<Map<String, dynamic>> txs) {
+                      // Apply filter & search
+                      final filteredTxs = txs.where((tx) {
+                        final String type = tx['type']?.toString() ?? 'purchase';
+                        final String canteenName = (tx['canteen_operators']?['canteen_name'] ?? 'Kantin').toString().toLowerCase();
+                        
+                        // Filter match
+                        if (_selectedFilterIndex == 1 && type != 'purchase') return false;
+                        if (_selectedFilterIndex == 2 && type != 'topup') return false;
 
-                    // Search query match
-                    if (_searchQuery.isNotEmpty) {
-                      if (type == 'topup') {
-                        return 'top-up saldo'.contains(_searchQuery) || 'koperasi'.contains(_searchQuery);
-                      }
-                      return canteenName.contains(_searchQuery);
-                    }
-                    return true;
-                  }).toList();
+                        // Search query match
+                        if (_searchQuery.isNotEmpty) {
+                          if (type == 'topup') {
+                            return 'top-up saldo'.contains(_searchQuery) || 'koperasi'.contains(_searchQuery);
+                          }
+                          return canteenName.contains(_searchQuery);
+                        }
+                        return true;
+                      }).toList();
 
-                  if (filteredTxs.isEmpty) {
-                    return ListView(
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.symmetric(vertical: 80),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(CupertinoIcons.tray, color: AppColors.textGray, size: 48),
-                                SizedBox(height: 12),
-                                Text(
-                                  'Tidak ada riwayat transaksi',
-                                  style: TextStyle(fontSize: 14, color: AppColors.textGray, fontWeight: FontWeight.bold),
+                      if (filteredTxs.isEmpty) {
+                        return ListView(
+                          children: const [
+                            Padding(
+                              padding: EdgeInsets.symmetric(vertical: 80),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(CupertinoIcons.tray, color: AppColors.textGray, size: 48),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Tidak ada riwayat transaksi',
+                                      style: TextStyle(fontSize: 14, color: AppColors.textGray, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  final groupedTxs = _groupTransactionsByDate(filteredTxs);
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: groupedTxs.length,
-                    itemBuilder: (context, sectionIndex) {
-                      final sectionTitle = groupedTxs.keys.elementAt(sectionIndex);
-                      final sectionItems = groupedTxs[sectionTitle]!;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Section Header
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4, bottom: 8, top: 8),
-                            child: Text(
-                              sectionTitle,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textGray,
-                                letterSpacing: 0.5,
                               ),
                             ),
-                          ),
+                          ],
+                        );
+                      }
 
-                          // Cards block container
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppColors.borderLight, width: 0.5),
-                            ),
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: sectionItems.length,
-                              separatorBuilder: (context, index) => const Divider(
-                                height: 0.5,
-                                indent: 56,
-                                color: AppColors.borderLight,
+                      final groupedTxs = _groupTransactionsByDate(filteredTxs);
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: groupedTxs.length,
+                        itemBuilder: (context, sectionIndex) {
+                          final sectionTitle = groupedTxs.keys.elementAt(sectionIndex);
+                          final sectionItems = groupedTxs[sectionTitle]!;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Section Header
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4, bottom: 8, top: 8),
+                                child: Text(
+                                  sectionTitle,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textGray,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                               ),
-                              itemBuilder: (context, index) {
-                                final tx = sectionItems[index];
-                                final String type = tx['type']?.toString() ?? 'purchase';
-                                final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                                final String canteenName = tx['canteen_operators']?['canteen_name'] ?? 'Kantin';
-                                final bool isTopup = type == 'topup';
-                                final String timeStr = tx['created_at'] != null 
-                                    ? DateFormat('HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
-                                    : '-';
 
-                                return ListTile(
-                                  onTap: () => _showTransactionDetail(context, tx),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                  leading: Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: isTopup
-                                          ? AppColors.primary.withAlpha(20)
-                                          : const Color(0xFFF2F2F7),
-                                    ),
-                                    child: Icon(
-                                      isTopup ? CupertinoIcons.square_arrow_down : Icons.restaurant,
-                                      color: isTopup ? AppColors.primary : AppColors.textDark,
-                                      size: 18,
-                                    ),
+                              // Cards block container
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.borderLight, width: 0.5),
+                                ),
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: sectionItems.length,
+                                  separatorBuilder: (context, index) => const Divider(
+                                    height: 0.5,
+                                    indent: 56,
+                                    color: AppColors.borderLight,
                                   ),
-                                  title: Text(
-                                    isTopup ? 'Top-Up Saldo' : canteenName,
-                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textDark),
-                                  ),
-                                  subtitle: Text(
-                                    '$timeStr WIB \u2022 ${isTopup ? "Koperasi" : "Jajan"}',
-                                    style: const TextStyle(color: AppColors.textGray, fontSize: 11),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        '${isTopup ? "+" : "-"}Rp ${NumberFormat('#,###', 'id_ID').format(amount)}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14,
-                                          color: isTopup ? AppColors.primary : AppColors.error,
+                                  itemBuilder: (context, index) {
+                                    final tx = sectionItems[index];
+                                    final String type = tx['type']?.toString() ?? 'purchase';
+                                    final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
+                                    final String canteenName = tx['canteen_operators']?['canteen_name'] ?? 'Kantin';
+                                    final bool isTopup = type == 'topup';
+                                    final String timeStr = tx['created_at'] != null 
+                                        ? DateFormat('HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
+                                        : '-';
+
+                                    return ListTile(
+                                      onTap: () => _showTransactionDetail(context, tx),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                      leading: Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isTopup
+                                              ? AppColors.primary.withAlpha(20)
+                                              : const Color(0xFFF2F2F7),
+                                        ),
+                                        child: Icon(
+                                          isTopup ? CupertinoIcons.square_arrow_down : Icons.restaurant,
+                                          color: isTopup ? AppColors.primary : AppColors.textDark,
+                                          size: 18,
                                         ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Icon(
-                                        isTopup ? CupertinoIcons.chevron_up : CupertinoIcons.chevron_down,
-                                        size: 12,
-                                        color: isTopup ? AppColors.primary : AppColors.error,
+                                      title: Text(
+                                        isTopup ? 'Top-Up Saldo' : canteenName,
+                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textDark),
                                       ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
+                                      subtitle: Text(
+                                        '$timeStr WIB \u2022 ${isTopup ? "Koperasi" : "Jajan"}',
+                                        style: const TextStyle(color: AppColors.textGray, fontSize: 11),
+                                      ),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            '${isTopup ? "+" : "-"}Rp ${NumberFormat('#,###', 'id_ID').format(amount)}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 14,
+                                              color: isTopup ? AppColors.primary : AppColors.error,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            isTopup ? CupertinoIcons.chevron_up : CupertinoIcons.chevron_down,
+                                            size: 12,
+                                            color: isTopup ? AppColors.primary : AppColors.error,
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        },
                       );
                     },
-                  );
-                },
-                loading: () => const Center(child: CupertinoActivityIndicator()),
-                error: (err, stack) => Center(child: Text('Gagal memuat riwayat: $err', style: const TextStyle(color: AppColors.error))),
-              ),
+                    loading: () => const Center(child: CupertinoActivityIndicator()),
+                    error: (err, stack) => Center(child: Text('Gagal memuat riwayat: $err', style: const TextStyle(color: AppColors.error))),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

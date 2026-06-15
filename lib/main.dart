@@ -31,31 +31,6 @@ class MainApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       routerConfig: AppRouter.router,
       debugShowCheckedModeBanner: false,
-      builder: (BuildContext context, Widget? child) {
-        if (child == null) return const SizedBox.shrink();
-        
-        // Center and constrain layout width to 480px on large screens (Web/Tablet/Desktop)
-        return Container(
-          color: const Color(0xFFE5E5EA), // Standard iOS system background gray
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Container(
-                decoration: const BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 15,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: child,
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
 
-class KantinMainLayout extends StatelessWidget {
+class KantinMainLayout extends ConsumerWidget {
   final Widget child;
   const KantinMainLayout({super.key, required this.child});
 
@@ -36,9 +38,52 @@ class KantinMainLayout extends StatelessWidget {
     }
   }
 
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext ctx) => CupertinoAlertDialog(
+        title: const Text('Keluar Aplikasi'),
+        content: const Text('Apakah Anda yakin ingin keluar dari akun kasir?'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Batal'),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(authNotifierProvider.notifier).logout();
+              context.go('/login');
+            },
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final int selectedIndex = _getSelectedIndex(context);
+    final double width = MediaQuery.of(context).size.width;
+    final bool isDesktop = width >= 768;
+
+    if (isDesktop) {
+      return Scaffold(
+        body: Row(
+          children: [
+            // Left sidebar
+            _buildSidebar(context, ref, selectedIndex),
+            const VerticalDivider(width: 0.5, thickness: 0.5, color: AppColors.borderLight),
+            // Right content
+            Expanded(
+              child: child,
+            ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       body: child,
@@ -80,6 +125,204 @@ class KantinMainLayout extends StatelessWidget {
               label: 'Riwayat',
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar(BuildContext context, WidgetRef ref, int selectedIndex) {
+    final authState = ref.watch(authNotifierProvider);
+    final String canteenName = authState.profile?['canteen_name'] ?? 'Stan Kantin';
+    final String email = authState.profile?['email'] ?? '';
+
+    return Container(
+      width: 260,
+      color: Colors.white,
+      child: Column(
+        children: [
+          // Sidebar Header (Logo & Title)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.storefront,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'KASIR',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        'DIGITAL',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textDark,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 0.5, color: AppColors.borderLight),
+          const SizedBox(height: 16),
+
+          // Sidebar Navigation Items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildSidebarItem(
+                  context: context,
+                  icon: CupertinoIcons.home,
+                  activeIcon: CupertinoIcons.house_fill,
+                  label: 'Beranda',
+                  isSelected: selectedIndex == 0,
+                  onTap: () => _onItemTapped(0, context),
+                ),
+                const SizedBox(height: 8),
+                _buildSidebarItem(
+                  context: context,
+                  icon: CupertinoIcons.creditcard,
+                  activeIcon: CupertinoIcons.creditcard_fill,
+                  label: 'Cek Kartu',
+                  isSelected: selectedIndex == 1,
+                  onTap: () => _onItemTapped(1, context),
+                ),
+                const SizedBox(height: 8),
+                _buildSidebarItem(
+                  context: context,
+                  icon: CupertinoIcons.tray_full,
+                  activeIcon: CupertinoIcons.tray_full_fill,
+                  label: 'Kelola Menu',
+                  isSelected: selectedIndex == 2,
+                  onTap: () => _onItemTapped(2, context),
+                ),
+                const SizedBox(height: 8),
+                _buildSidebarItem(
+                  context: context,
+                  icon: CupertinoIcons.time,
+                  activeIcon: CupertinoIcons.time_solid,
+                  label: 'Riwayat Jualan',
+                  isSelected: selectedIndex == 3,
+                  onTap: () => _onItemTapped(3, context),
+                ),
+              ],
+            ),
+          ),
+
+          // User Profile Card & Logout at bottom
+          const Divider(height: 1, thickness: 0.5, color: AppColors.borderLight),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.primaryLight,
+                  child: Icon(Icons.store, color: AppColors.primary, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        canteenName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(CupertinoIcons.square_arrow_right, color: AppColors.error, size: 20),
+                  onPressed: () => _handleLogout(context, ref),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem({
+    required BuildContext context,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryLight : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isSelected ? activeIcon : icon,
+                color: isSelected ? AppColors.primary : AppColors.textGray,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? AppColors.primary : AppColors.textDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
