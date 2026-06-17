@@ -196,12 +196,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       unselectedColor: Colors.white,
                       borderColor: const Color(0xFFE4E2E1),
                       pressedColor: primaryTeal.withValues(alpha: 0.1),
-                      children: const {
-                        'Semua': Padding(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), child: Text('Semua', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                        'Keuangan': Padding(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), child: Text('Keuangan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                        'Kantin': Padding(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), child: Text('Kantin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                        'Siswa': Padding(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), child: Text('Siswa', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                        'Orang Tua': Padding(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), child: Text('Orang Tua', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                      children: {
+                        'Semua': _buildRoleFilterSegment('Semua'),
+                        'Keuangan': _buildRoleFilterSegment('Keuangan'),
+                        'Kantin': _buildRoleFilterSegment('Kantin'),
+                        'Siswa': _buildRoleFilterSegment('Siswa'),
+                        'Orang Tua': _buildRoleFilterSegment('Orang Tua'),
                       },
                       onValueChanged: (val) {
                         setState(() {
@@ -375,66 +375,96 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             const SizedBox(height: 12),
                             
                             // Cupertino Switch & Action button
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Status: ',
-                                        style: GoogleFonts.beVietnamPro(
-                                          fontSize: 13,
-                                          color: const Color(0xFF3F4848),
-                                        ),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final statusControl = Row(
+                                  children: [
+                                    Text(
+                                      'Status: ',
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 13,
+                                        color: const Color(0xFF3F4848),
                                       ),
-                                      Text(
+                                    ),
+                                    Flexible(
+                                      child: Text(
                                         isActive ? 'AKTIF' : 'DIBLOKIR',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.beVietnamPro(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w700,
                                           color: isActive ? const Color(0xFF006A35) : const Color(0xFFBA1A1A),
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Transform.scale(
-                                        scale: 0.8,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    SizedBox(
+                                      width: 44,
+                                      height: 28,
+                                      child: FittedBox(
+                                        fit: BoxFit.contain,
                                         child: CupertinoSwitch(
                                           value: isActive,
                                           activeTrackColor: primaryTeal,
                                           onChanged: (val) => _toggleUserStatus(id, role, isActive),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                
-                                // Detail trigger link
-                                InkWell(
+                                    ),
+                                  ],
+                                );
+
+                                final detailLink = InkWell(
                                   onTap: () => _navigateToDetail(id, role),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Detail & Riwayat',
-                                        style: GoogleFonts.beVietnamPro(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Detail & Riwayat',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryTeal,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          CupertinoIcons.chevron_right,
+                                          size: 14,
                                           color: primaryTeal,
                                         ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        CupertinoIcons.chevron_right,
-                                        size: 14,
-                                        color: primaryTeal,
+                                      ],
+                                    ),
+                                  ),
+                                );
+
+                                if (constraints.maxWidth < 330) {
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      statusControl,
+                                      const SizedBox(height: 8),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: detailLink,
                                       ),
                                     ],
-                                  ),
-                                ),
-                              ],
+                                  );
+                                }
+
+                                return Row(
+                                  children: [
+                                    Expanded(child: statusControl),
+                                    const SizedBox(width: 12),
+                                    detailLink,
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -448,6 +478,26 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRoleFilterSegment(String label) {
+    return SizedBox(
+      width: label == 'Orang Tua' ? 104 : 92,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.visible,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

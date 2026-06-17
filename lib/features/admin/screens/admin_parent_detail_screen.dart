@@ -15,7 +15,7 @@ final adminParentDetailProvider = FutureProvider.autoDispose.family<Map<String, 
   // 2. Fetch linked children data
   final List<dynamic> childrenRes = await client
       .from('parent_students')
-      .select('student_id, students(class, profiles(full_name))')
+      .select('student_id, students!parent_students_student_id_fkey(class, profiles!students_id_fkey(full_name))')
       .eq('parent_id', id);
       
   return {
@@ -299,7 +299,7 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
                                             ),
                                           ),
                                           Text(
-                                            'Kelas $classStr • SMP Terpadu',
+                                            'Kelas $classStr',
                                             style: GoogleFonts.beVietnamPro(
                                               fontSize: 12,
                                               color: AppColors.textGray,

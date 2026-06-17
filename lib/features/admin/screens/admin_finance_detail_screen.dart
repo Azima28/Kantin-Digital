@@ -112,6 +112,155 @@ class _AdminFinanceDetailScreenState extends ConsumerState<AdminFinanceDetailScr
     );
   }
 
+  Future<List<Map<String, dynamic>>> _fetchAllOfficerLogs({
+    required String officerId,
+    required String actorName,
+  }) async {
+    final client = ref.read(supabaseClientProvider);
+    final List<dynamic> logs = await client
+        .from('audit_logs')
+        .select('action_type, description, created_at')
+        .or('actor_id.eq.$officerId,actor_name.eq.$actorName')
+        .order('created_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(logs);
+  }
+
+  void _showAllOfficerLogsSheet({
+    required String officerId,
+    required String actorName,
+    required Color primaryTeal,
+    required Color accentOrange,
+    required Color successGreen,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.82,
+          minChildSize: 0.45,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFBFC8C8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Semua Aktivitas',
+                    style: GoogleFonts.beVietnamPro(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: primaryTeal,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _fetchAllOfficerLogs(
+                        officerId: officerId,
+                        actorName: actorName,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CupertinoActivityIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Gagal memuat aktivitas: ${snapshot.error}'));
+                        }
+
+                        final logs = snapshot.data ?? [];
+                        if (logs.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Belum ada aktivitas transaksi manual.',
+                              style: GoogleFonts.beVietnamPro(color: AppColors.textGray),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          controller: scrollController,
+                          itemCount: logs.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final log = logs[index];
+                            final actionType = log['action_type'] ?? '';
+                            final desc = log['description'] ?? '';
+                            final date = log['created_at'] != null
+                                ? DateTime.parse(log['created_at']).toLocal()
+                                : DateTime.now();
+
+                            IconData logIcon = CupertinoIcons.doc_text;
+                            Color logColor = primaryTeal;
+                            if (actionType.contains('KOREKSI')) {
+                              logIcon = CupertinoIcons.refresh;
+                              logColor = accentOrange;
+                            } else if (actionType.contains('REGISTRASI')) {
+                              logIcon = CupertinoIcons.creditcard;
+                              logColor = successGreen;
+                            }
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              tileColor: const Color(0xFFF8F7F6),
+                              leading: CircleAvatar(
+                                backgroundColor: logColor.withValues(alpha: 0.1),
+                                child: Icon(logIcon, color: logColor, size: 18),
+                              ),
+                              title: Text(
+                                actionType.replaceAll('_', ' '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.beVietnamPro(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: logColor,
+                                ),
+                              ),
+                              subtitle: Text(
+                                desc,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.beVietnamPro(fontSize: 12),
+                              ),
+                              trailing: Text(
+                                DateFormat('HH:mm').format(date),
+                                style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppColors.textGray),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(adminFinanceDetailProvider(widget.officerId));
@@ -146,7 +295,6 @@ class _AdminFinanceDetailScreenState extends ConsumerState<AdminFinanceDetailScr
 
           final String fullName = profile['full_name'] ?? '';
           final String username = profile['username'] ?? '';
-          final String assignedSchool = officer['assigned_school'] ?? 'SMP Terpadu';
           final String authorityLevel = officer['authority_level'] ?? 'L1';
           final List<dynamic> features = officer['features'] ?? [];
 
@@ -241,120 +389,62 @@ class _AdminFinanceDetailScreenState extends ConsumerState<AdminFinanceDetailScr
                 ),
                 const SizedBox(height: 16),
 
-                // Ops Card (Unit Tugas & Tingkat Akses)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Unit Tugas
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.school, size: 16, color: AppColors.textGray),
-                                SizedBox(width: 6),
-                                Text(
-                                  'UNIT TUGAS',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textGray),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              assignedSchool,
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF1B1C1B),
-                              ),
-                            ),
-                            Text(
-                              'Kampus Utama',
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 11,
-                                color: AppColors.textGray,
-                              ),
-                            ),
-                          ],
+                // Access Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.verified_user, size: 16, color: AppColors.textGray),
+                          SizedBox(width: 6),
+                          Text(
+                            'TINGKAT AKSES',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textGray),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Officer $authorityLevel',
+                        style: GoogleFonts.beVietnamPro(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1B1C1B),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Tingkat Akses
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: features.map((f) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: primaryTeal.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.verified_user, size: 16, color: AppColors.textGray),
-                                SizedBox(width: 6),
-                                Text(
-                                  'TINGKAT AKSES',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textGray),
-                                ),
-                              ],
+                            child: Text(
+                              f.toString(),
+                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: primaryTeal),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Officer $authorityLevel',
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF1B1C1B),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 4,
-                              runSpacing: 4,
-                              children: features.map((f) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: primaryTeal.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    f.toString(),
-                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: primaryTeal),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
+                          );
+                        }).toList(),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -371,7 +461,13 @@ class _AdminFinanceDetailScreenState extends ConsumerState<AdminFinanceDetailScr
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => _showAllOfficerLogsSheet(
+                        officerId: widget.officerId,
+                        actorName: fullName,
+                        primaryTeal: primaryTeal,
+                        accentOrange: accentOrange,
+                        successGreen: successGreen,
+                      ),
                       child: Text(
                         'Lihat Semua',
                         style: GoogleFonts.beVietnamPro(

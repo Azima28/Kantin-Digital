@@ -27,7 +27,7 @@ final adminMerchantDetailProvider = FutureProvider.autoDispose.family<Map<String
   // 4. Fetch recent transactions
   final List<dynamic> txs = await client
       .from('transactions')
-      .select('id, total_amount, created_at, student_id, profiles!transactions_student_id_fkey(nisn)')
+      .select('id, total_amount, created_at, student_id, students!transactions_student_id_fkey(profiles!students_id_fkey(nisn))')
       .eq('operator_id', id)
       .eq('status', 'success')
       .eq('type', 'purchase')
@@ -560,7 +560,7 @@ class _AdminMerchantDetailScreenState extends ConsumerState<AdminMerchantDetailS
                                   final date = tx['created_at'] != null 
                                       ? DateTime.parse(tx['created_at']).toLocal() 
                                       : DateTime.now();
-                                  final String nisn = tx['profiles']?['nisn'] ?? '-';
+                                  final String nisn = tx['students']?['profiles']?['nisn'] ?? '-';
 
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

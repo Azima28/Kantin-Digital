@@ -377,12 +377,16 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                                   child: const Icon(CupertinoIcons.link, color: accentOrange, size: 16),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Payment API',
-                                  style: GoogleFonts.beVietnamPro(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryTeal,
+                                Expanded(
+                                  child: Text(
+                                    'Payment API',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.beVietnamPro(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryTeal,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -410,11 +414,14 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                             const SizedBox(height: 12),
 
                             // Env Mode switcher
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text('Env', style: TextStyle(fontSize: 11, color: AppColors.textGray)),
-                                Row(
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
                                   children: [
                                     GestureDetector(
                                       onTap: () => setState(() => _isSandbox = true),
@@ -434,7 +441,6 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
                                     GestureDetector(
                                       onTap: () => setState(() => _isSandbox = false),
                                       child: Container(
@@ -529,12 +535,16 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                                   child: const Icon(CupertinoIcons.hammer, color: Color(0xFFBA1A1A), size: 16),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'System Access',
-                                  style: GoogleFonts.beVietnamPro(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFFBA1A1A),
+                                Expanded(
+                                  child: Text(
+                                    'System Access',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.beVietnamPro(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFFBA1A1A),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -549,19 +559,30 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                             ),
                             const SizedBox(height: 16),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Maintenance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                                Transform.scale(
-                                  scale: 0.8,
-                                  child: CupertinoSwitch(
-                                    value: _isMaintenanceMode,
-                                    activeTrackColor: primaryTeal,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _isMaintenanceMode = val;
-                                      });
-                                    },
+                                const Expanded(
+                                  child: Text(
+                                    'Maintenance',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 44,
+                                  height: 28,
+                                  child: FittedBox(
+                                    fit: BoxFit.contain,
+                                    child: CupertinoSwitch(
+                                      value: _isMaintenanceMode,
+                                      activeTrackColor: primaryTeal,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _isMaintenanceMode = val;
+                                        });
+                                      },
+                                    ),
                                   ),
                                 ),
                               ],

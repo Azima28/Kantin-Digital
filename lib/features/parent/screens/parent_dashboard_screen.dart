@@ -306,7 +306,7 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$classStr • SMP Terpadu Kota',
+                      classStr,
                       style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppColors.textGray, fontWeight: FontWeight.w500),
                     ),
                   ],

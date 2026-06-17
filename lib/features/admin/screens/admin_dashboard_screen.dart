@@ -10,7 +10,7 @@ final adminDashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
 
   double studentBalanceSum = 0;
   double merchantBalanceSum = 0;
-  int schoolCount = 5; // Fallback mock school count
+  int userCount = 0;
   int totalTransactionsToday = 0;
   double transactionVolumeToday = 0;
 
@@ -26,6 +26,10 @@ final adminDashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
     for (var row in merchantRes) {
       merchantBalanceSum += double.tryParse(row['balance_earned'].toString()) ?? 0.0;
     }
+
+    // 2b. Fetch user count
+    final profilesRes = await client.from('profiles').select('id');
+    userCount = profilesRes.length;
 
     // 3. Fetch Transactions Today
     final now = DateTime.now().toLocal();
@@ -46,7 +50,7 @@ final adminDashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   }
 
   return {
-    'school_count': schoolCount,
+    'user_count': userCount,
     'global_balance': studentBalanceSum + merchantBalanceSum,
     'daily_volume': transactionVolumeToday,
     'tx_count_today': totalTransactionsToday,
@@ -210,7 +214,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'SCHOOL COUNT',
+                                    'TOTAL USERS',
                                     style: GoogleFonts.beVietnamPro(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
@@ -220,7 +224,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '1,248',
+                                    data['user_count'] > 0 ? data['user_count'].toString() : '0',
                                     style: GoogleFonts.beVietnamPro(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
@@ -291,30 +295,32 @@ class AdminDashboardScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  'Rp',
-                                  style: GoogleFonts.beVietnamPro(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w500,
-                                    color: accentOrange,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    'Rp',
+                                    style: GoogleFonts.beVietnamPro(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                      color: accentOrange,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  CurrencyFormatter.format(globalBalance).replaceAll('Rp', '').trim(),
-                                  style: GoogleFonts.beVietnamPro(
-                                    fontSize: 34,
-                                    fontWeight: FontWeight.w700,
-                                    color: accentOrange,
-                                    letterSpacing: -0.02,
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    CurrencyFormatter.format(globalBalance).replaceAll('Rp', '').trim(),
+                                    style: GoogleFonts.beVietnamPro(
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w700,
+                                      color: accentOrange,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -330,16 +336,20 @@ class AdminDashboardScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Transaction Trend',
-                            style: GoogleFonts.beVietnamPro(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: primaryTeal,
+                          Expanded(
+                            child: Text(
+                              'Transaction Trend',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: primaryTeal,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
@@ -373,123 +383,36 @@ class AdminDashboardScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
 
                 // Two widgets row: Contribution & Server Health
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Contribution per School
-                    Expanded(
-                      child: _buildBentoCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Contribution/Sch',
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: primaryTeal,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Donut Chart Mockup representation
-                            Center(
-                              child: Container(
-                                width: 88,
-                                height: 88,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: primaryTeal,
-                                    width: 10,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'Vol.',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryTeal,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Donut Chart Legends
-                            _buildLegendItem(primaryTeal, 'High School A'),
-                            const SizedBox(height: 4),
-                            _buildLegendItem(const Color(0xFFFCA558), 'Middle School B'),
-                            const SizedBox(height: 4),
-                            _buildLegendItem(successGreen, 'Others'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final contributionCard = _buildContributionCard(
+                      primaryTeal: primaryTeal,
+                      successGreen: successGreen,
+                    );
+                    final healthCard = _buildSystemHealthCard(
+                      primaryTeal: primaryTeal,
+                      successGreen: successGreen,
+                    );
 
-                    // System Health Card
-                    Expanded(
-                      child: _buildBentoCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'System Health',
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: primaryTeal,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
+                    if (constraints.maxWidth < 430) {
+                      return Column(
+                        children: [
+                          contributionCard,
+                          const SizedBox(height: 12),
+                          healthCard,
+                        ],
+                      );
+                    }
 
-                            // Optimal green pulse badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: successGreen.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(99),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: successGreen,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Optimal',
-                                    style: GoogleFonts.beVietnamPro(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: successGreen,
-                                      letterSpacing: 0.05,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Health Items list
-                            _buildHealthItem(Icons.speed, 'API Latency', '42ms'),
-                            const SizedBox(height: 10),
-                            _buildHealthItem(Icons.storage, 'DB Capacity', '12%'),
-                            const SizedBox(height: 10),
-                            _buildHealthItem(Icons.check_circle, 'Success Rate', '99.8%'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: contributionCard),
+                        const SizedBox(width: 12),
+                        Expanded(child: healthCard),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -548,26 +471,139 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHealthItem(IconData icon, String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: const Color(0xFF6F7978)),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.beVietnamPro(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF1B1C1B),
+  Widget _buildContributionCard({
+    required Color primaryTeal,
+    required Color successGreen,
+  }) {
+    return _buildBentoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Role Activity',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: primaryTeal,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: primaryTeal,
+                  width: 10,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  'Vol.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: primaryTeal,
+                  ),
+                ),
               ),
             ),
-          ],
+          ),
+          const SizedBox(height: 16),
+          _buildLegendItem(primaryTeal, 'Siswa'),
+          const SizedBox(height: 4),
+          _buildLegendItem(const Color(0xFFFCA558), 'Petugas Kantin'),
+          const SizedBox(height: 4),
+          _buildLegendItem(successGreen, 'Orang Tua'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSystemHealthCard({
+    required Color primaryTeal,
+    required Color successGreen,
+  }) {
+    return _buildBentoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'System Health',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: primaryTeal,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: successGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: successGreen,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Optimal',
+                  style: GoogleFonts.beVietnamPro(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: successGreen,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildHealthItem(Icons.speed, 'API Latency', '42ms'),
+          const SizedBox(height: 10),
+          _buildHealthItem(Icons.storage, 'DB Capacity', '12%'),
+          const SizedBox(height: 10),
+          _buildHealthItem(Icons.check_circle, 'Success Rate', '99.8%'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthItem(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF6F7978)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF1B1C1B),
+            ),
+          ),
         ),
+        const SizedBox(width: 8),
         Text(
           value,
+          maxLines: 1,
           style: GoogleFonts.beVietnamPro(
             fontSize: 13,
             fontWeight: FontWeight.w600,

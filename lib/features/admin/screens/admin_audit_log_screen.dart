@@ -26,10 +26,8 @@ class AdminAuditLogScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
-  String _selectedSchool = 'All Schools';
   String _selectedAction = 'All Actions';
 
-  final List<String> _schools = ['All Schools', 'SMP Terpadu', 'SMA Negeri 1', 'SMA Kebangsaan'];
   final List<String> _actions = ['All Actions', 'Balance Correction', 'Card Registration', 'System Settings'];
 
   String _mapActionTypeToFilter(String filter) {
@@ -263,76 +261,35 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                 ),
                 const SizedBox(height: 16),
                 
-                // 2 Dropdowns
-                Row(
-                  children: [
-                    // School Filter
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFEDEC),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedSchool,
-                            isExpanded: true,
-                            icon: const Icon(CupertinoIcons.chevron_down, size: 16, color: primaryTeal),
-                            style: GoogleFonts.beVietnamPro(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1B1C1B),
-                            ),
-                            items: _schools.map((s) {
-                              return DropdownMenuItem(value: s, child: Text(s));
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  _selectedSchool = val;
-                                });
-                              }
-                            },
-                          ),
-                        ),
+                // Action Filter
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFEDEC),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedAction,
+                      isExpanded: true,
+                      icon: const Icon(CupertinoIcons.chevron_down, size: 16, color: primaryTeal),
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1B1C1B),
                       ),
+                      items: _actions.map((a) {
+                        return DropdownMenuItem(value: a, child: Text(a));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedAction = val;
+                          });
+                        }
+                      },
                     ),
-                    const SizedBox(width: 12),
-
-                    // Action Filter
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFEDEC),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedAction,
-                            isExpanded: true,
-                            icon: const Icon(CupertinoIcons.chevron_down, size: 16, color: primaryTeal),
-                            style: GoogleFonts.beVietnamPro(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1B1C1B),
-                            ),
-                            items: _actions.map((a) {
-                              return DropdownMenuItem(value: a, child: Text(a));
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  _selectedAction = val;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -345,14 +302,6 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
               data: (logs) {
                 // Filter locally
                 var filtered = logs;
-
-                if (_selectedSchool != 'All Schools') {
-                  // Since school filter maps to description or school penugasan
-                  filtered = filtered.where((l) {
-                    final desc = l['description'].toString().toLowerCase();
-                    return desc.contains(_selectedSchool.toLowerCase());
-                  }).toList();
-                }
 
                 if (_selectedAction != 'All Actions') {
                   final dbActionKey = _mapActionTypeToFilter(_selectedAction);

@@ -158,6 +158,146 @@ class _AdminStudentDetailScreenState extends ConsumerState<AdminStudentDetailScr
     );
   }
 
+  Future<List<Map<String, dynamic>>> _fetchAllTransactions(String studentId) async {
+    final client = ref.read(supabaseClientProvider);
+    final List<dynamic> txs = await client
+        .from('transactions')
+        .select('id, total_amount, type, status, created_at, canteen_operators(canteen_name)')
+        .eq('student_id', studentId)
+        .order('created_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(txs);
+  }
+
+  void _showAllTransactionsSheet({
+    required String studentId,
+    required Color primaryTeal,
+    required Color accentOrange,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.82,
+          minChildSize: 0.45,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFBFC8C8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Semua Transaksi',
+                    style: GoogleFonts.beVietnamPro(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: primaryTeal,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _fetchAllTransactions(studentId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CupertinoActivityIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Gagal memuat transaksi: ${snapshot.error}'));
+                        }
+
+                        final txs = snapshot.data ?? [];
+                        if (txs.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Belum ada transaksi.',
+                              style: GoogleFonts.beVietnamPro(color: AppColors.textGray),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          controller: scrollController,
+                          itemCount: txs.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final tx = txs[index];
+                            final amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
+                            final type = tx['type'] ?? 'purchase';
+                            final isTopup = type == 'topup';
+                            final canteen = tx['canteen_operators']?['canteen_name'] ?? 'Stan Kantin';
+                            final date = tx['created_at'] != null
+                                ? DateTime.parse(tx['created_at']).toLocal()
+                                : DateTime.now();
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              tileColor: const Color(0xFFF8F7F6),
+                              leading: CircleAvatar(
+                                backgroundColor: isTopup
+                                    ? const Color(0xFFFFDCC3)
+                                    : primaryTeal.withValues(alpha: 0.1),
+                                child: Icon(
+                                  isTopup ? CupertinoIcons.creditcard : Icons.shopping_bag,
+                                  color: isTopup ? accentOrange : primaryTeal,
+                                  size: 18,
+                                ),
+                              ),
+                              title: Text(
+                                isTopup ? 'Top-up Saldo' : canteen,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.beVietnamPro(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                DateFormat('dd MMM yyyy, HH:mm').format(date),
+                                style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppColors.textGray),
+                              ),
+                              trailing: Text(
+                                '${isTopup ? "+" : "-"}Rp ${NumberFormat('#,###', 'id_ID').format(amount)}',
+                                style: GoogleFonts.beVietnamPro(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isTopup ? const Color(0xFF006A35) : const Color(0xFFBA1A1A),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final studentAsync = ref.watch(adminStudentDetailProvider(widget.studentId));
@@ -376,7 +516,11 @@ class _AdminStudentDetailScreenState extends ConsumerState<AdminStudentDetailScr
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => _showAllTransactionsSheet(
+                        studentId: widget.studentId,
+                        primaryTeal: primaryTeal,
+                        accentOrange: accentOrange,
+                      ),
                       child: Text(
                         'Lihat Semua',
                         style: GoogleFonts.beVietnamPro(
