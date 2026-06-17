@@ -241,7 +241,7 @@ class _StudentWelcomeScreenState extends State<StudentWelcomeScreen>
                         width: double.infinity,
                         child: OutlinedButton(
                           onPressed: () {
-                            context.push('/login');
+                            context.push('/parent');
                           },
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.primary, width: 1.5),

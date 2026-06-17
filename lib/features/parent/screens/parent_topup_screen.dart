@@ -8,6 +8,7 @@ import 'package:kantin_digital/core/constants/app_colors.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
 import 'package:kantin_digital/features/siswa/providers/siswa_providers.dart';
+import 'package:kantin_digital/features/parent/screens/parent_dashboard_screen.dart';
 
 class ParentTopUpScreen extends ConsumerStatefulWidget {
   final String studentId;
@@ -20,10 +21,10 @@ class ParentTopUpScreen extends ConsumerStatefulWidget {
 class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _customAmountController = TextEditingController();
-  final _senderNameController = TextEditingController();
-  final _senderPhoneController = TextEditingController();
+  final _senderNameController = TextEditingController(text: 'Budi Subarjo');
+  final _senderPhoneController = TextEditingController(text: '08123456789');
 
-  int? _selectedQuickAmount = 50000; // default 50k
+  int? _selectedQuickAmount = 100000; // default 100k
   String? _errorMessage;
   bool _isLoading = false;
   String _studentName = 'Siswa';
@@ -85,7 +86,7 @@ class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
     return double.tryParse(_customAmountController.text) ?? 0.0;
   }
 
-  Future<void> _handlePaymentSimulation(double amount) async {
+  Future<void> _handlePaymentSimulation(double amount, String method) async {
     setState(() {
       _isLoading = true;
     });
@@ -132,18 +133,19 @@ class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
       await client.from('notifications').insert({
         'student_id': widget.studentId,
         'title': 'Top-Up Saldo Sukses!',
-        'message': 'Pengisian saldo saku sebesar ${CurrencyFormatter.format(amount)} via QRIS berhasil.',
+        'message': 'Pengisian saldo saku sebesar ${CurrencyFormatter.format(amount)} via $method berhasil.',
         'type': 'topup',
       });
 
       // Invalidate dashboard provider so that it updates
       ref.invalidate(siswaStudentProvider);
       ref.invalidate(siswaTransactionsProvider);
+      ref.invalidate(parentDashboardProvider(widget.studentId));
 
       if (mounted) {
-        Navigator.pop(context); // Close the bottom sheet modal
+        Navigator.pop(context); // Close the Midtrans snap modal
         context.push('/parent/receipt', extra: {
-          'orderId': 'PR-${Random().nextInt(899999) + 100000}',
+          'orderId': 'PR-${Random().nextInt(899999999) + 100000000}',
           'date': DateTime.now().toIso8601String(),
           'senderName': senderName,
           'senderPhone': senderPhone,
@@ -154,7 +156,7 @@ class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close bottom sheet
+        Navigator.pop(context); // Close bottom sheet/modal
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Top-up gagal: $e'),
@@ -172,7 +174,7 @@ class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
     }
   }
 
-  void _showCheckoutSheet() {
+  void _showMidtransSnapModal() {
     if (!_formKey.currentState!.validate()) return;
 
     final double amount = _getFinalAmount();
@@ -183,105 +185,491 @@ class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
       return;
     }
 
-    showModalBottomSheet(
+    final String orderId = 'KD-${Random().nextInt(899999) + 100000}';
+    String selectedMethod = 'QRIS'; // Default choice
+    bool showInstructions = false;
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      backgroundColor: Colors.white,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Container(
-              padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // iOS grab handle
-                  Container(
-                    width: 36,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(999),
+          builder: (context, setModalState) {
+            
+            // Method details map helper
+            final Map<String, dynamic> methodDetails = {
+              'QRIS': {
+                'title': 'QRIS',
+                'icon': CupertinoIcons.qrcode,
+                'subtext': 'Gopay, ShopeePay, Dana',
+              },
+              'BCA VA': {
+                'title': 'BCA Virtual Account',
+                'icon': Icons.account_balance,
+                'subtext': 'Transfer dari BCA',
+              },
+              'Mandiri VA': {
+                'title': 'Mandiri Virtual Account',
+                'icon': Icons.account_balance,
+                'subtext': 'Transfer dari Livin\'',
+              },
+              'Alfamart': {
+                'title': 'Alfamart / Indomaret',
+                'icon': Icons.storefront,
+                'subtext': 'Bayar di kasir',
+              },
+            };
+
+            Widget buildMethodRadio(String key, String title, String subtext, IconData icon) {
+              final isSelected = selectedMethod == key;
+              return GestureDetector(
+                onTap: () {
+                  setModalState(() {
+                    selectedMethod = key;
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0x0D006767) : Colors.white,
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF006767) : const Color(0xFFE4E2E1),
+                      width: isSelected ? 2 : 1,
                     ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Simulasi Pembayaran Midtrans Snap',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    CurrencyFormatter.format(amount),
-                    style: GoogleFonts.inter(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Divider(),
-                  const SizedBox(height: 12),
-                  const Row(
+                  child: Row(
                     children: [
-                      Icon(CupertinoIcons.shield_fill, color: AppColors.success, size: 16),
-                      SizedBox(width: 8),
-                      Text(
-                        'Secure Checkout by Midtrans',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF6F3F2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(icon, color: const Color(0xFF006767), size: 22),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtext,
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 12,
+                                color: AppColors.textGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF006767) : AppColors.textGray,
+                            width: 2,
+                          ),
+                        ),
+                        child: isSelected
+                            ? Center(
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0xFF006767),
+                                  ),
+                                ),
+                              )
+                            : null,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Payment methods list mockup
-                  _buildPaymentMockupItem('QRIS (Dana, Gopay, OVO)', CupertinoIcons.qrcode),
-                  _buildPaymentMockupItem('Virtual Account Bank (BCA, Mandiri)', CupertinoIcons.building_2_fill),
-                  _buildPaymentMockupItem('Kartu Kredit / Debit', CupertinoIcons.creditcard_fill),
-                  
-                  const SizedBox(height: 28),
-                  
-                  // Action buttons
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentOrange,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              );
+            }
+
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF6F3F2),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                       ),
-                      onPressed: _isLoading
-                          ? null
-                          : () async {
-                              setSheetState(() {});
-                              await _handlePaymentSimulation(amount);
-                            },
-                      child: _isLoading
-                          ? const CupertinoActivityIndicator(color: Colors.white)
-                          : const Text(
-                              'SIMULASIKAN PEMBAYARAN SUKSES',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(CupertinoIcons.shield_fill, color: Color(0xFF006767), size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'MIDTRANS SNAP',
+                                style: GoogleFonts.beVietnamPro(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(CupertinoIcons.xmark, color: AppColors.textGray, size: 20),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Body
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: showInstructions
+                            // Step 2: Pay details & simulation trigger
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      'Simulasi Pembayaran Anda',
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  // Selected method indicator
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFBF9F8),
+                                      border: Border.all(color: const Color(0xFFE4E2E1)),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(methodDetails[selectedMethod]['icon'], color: const Color(0xFF006767)),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          methodDetails[selectedMethod]['title'],
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          CurrencyFormatter.format(amount),
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF006767),
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  
+                                  if (selectedMethod == 'QRIS') ...[
+                                    Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(color: const Color(0xFFE4E2E1)),
+                                          borderRadius: BorderRadius.circular(16),
+                                          color: Colors.white,
+                                        ),
+                                        child: const Icon(
+                                          CupertinoIcons.qrcode,
+                                          size: 160,
+                                          color: Color(0xFF1B1C1C),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Silakan scan QR code di atas menggunakan Gopay, ShopeePay, OVO, Dana atau aplikasi pembayaran QRIS lainnya.',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 12,
+                                        color: AppColors.textGray,
+                                      ),
+                                    ),
+                                  ] else if (selectedMethod.contains('VA')) ...[
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFBF9F8),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFE4E2E1)),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            'Nomor Virtual Account',
+                                            style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppColors.textGray),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                '8910${_senderPhoneController.text.padRight(10, '0').substring(0, 10)}',
+                                                style: GoogleFonts.beVietnamPro(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: 1,
+                                                  color: const Color(0xFF006767),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              const Icon(CupertinoIcons.doc_on_doc, color: Color(0xFF006767), size: 16),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Lakukan transfer total tagihan ke nomor Virtual Account di atas melalui M-Banking atau ATM.',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 12,
+                                        color: AppColors.textGray,
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFBF9F8),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFE4E2E1)),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            'Kode Pembayaran Kasir',
+                                            style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppColors.textGray),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'KD-${Random().nextInt(89999) + 10000}',
+                                            style: GoogleFonts.beVietnamPro(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF006767),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Berikan kode pembayaran di atas ke kasir Alfamart atau Indomaret terdekat untuk menyelesaikan top-up.',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 12,
+                                        color: AppColors.textGray,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 32),
+
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFF9500),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () async {
+                                            setModalState(() {});
+                                            await _handlePaymentSimulation(amount, methodDetails[selectedMethod]['title']);
+                                          },
+                                    child: _isLoading
+                                        ? const CupertinoActivityIndicator(color: Colors.white)
+                                        : Text(
+                                            'SIMULASIKAN PEMBAYARAN SUKSES',
+                                            style: GoogleFonts.beVietnamPro(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextButton(
+                                    onPressed: () {
+                                      setModalState(() {
+                                        showInstructions = false;
+                                      });
+                                    },
+                                    child: Text(
+                                      'Ganti Metode Pembayaran',
+                                      style: GoogleFonts.beVietnamPro(
+                                        color: const Color(0xFF006767),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            // Step 1: Bill & Method Choice list
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Total bill box
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFBF9F8),
+                                      border: Border.all(color: const Color(0xFFE4E2E1)),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          'Total Tagihan',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.textGray,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          CurrencyFormatter.format(amount),
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF006767),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Order ID: $orderId',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 12,
+                                            color: AppColors.textGray,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  Text(
+                                    'Pilih Metode Pembayaran',
+                                    style: GoogleFonts.beVietnamPro(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  buildMethodRadio('QRIS', 'QRIS', 'Gopay, ShopeePay, Dana', CupertinoIcons.qrcode_viewfinder),
+                                  buildMethodRadio('BCA VA', 'BCA Virtual Account', 'Transfer dari BCA', Icons.account_balance),
+                                  buildMethodRadio('Mandiri VA', 'Mandiri Virtual Account', 'Transfer dari Livin\'', Icons.account_balance),
+                                  buildMethodRadio('Alfamart', 'Alfamart / Indomaret', 'Bayar di kasir', Icons.storefront),
+                                ],
+                              ),
+                      ),
+                    ),
+
+                    // Footer
+                    if (!showInstructions)
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Color(0xFFE4E2E1), width: 1),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF006767),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              onPressed: () {
+                                setModalState(() {
+                                    showInstructions = true;
+                                });
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'LANJUTKAN PEMBAYARAN',
+                                    style: GoogleFonts.beVietnamPro(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(CupertinoIcons.arrow_right, color: Colors.white, size: 16),
+                                ],
+                              ),
                             ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        'Batalkan',
-                        style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(CupertinoIcons.lock_fill, color: AppColors.textGray, size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Pembayaran Aman via Midtrans',
+                                  style: GoogleFonts.beVietnamPro(
+                                    fontSize: 12,
+                                    color: AppColors.textGray,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -290,62 +678,67 @@ class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
     );
   }
 
-  Widget _buildPaymentMockupItem(String label, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F7),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.primary, size: 18),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-          const Spacer(),
-          const Icon(CupertinoIcons.circle, color: AppColors.textGray, size: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickAmountItem(int amount, String label, String displayPrice) {
+  Widget _buildQuickAmountItem(int amount, String label) {
     final bool isSelected = _selectedQuickAmount == amount;
     return GestureDetector(
       onTap: () => _onQuickAmountSelected(amount),
       child: Container(
+        height: 72,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight : Colors.white,
+          color: isSelected ? const Color(0xFF8FF3F2).withValues(alpha: 0.2) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.primary : const Color(0xFFE5E5EA),
+            color: isSelected ? const Color(0xFF006767) : const Color(0xFFE4E2E1),
             width: isSelected ? 2.0 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF006767).withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: isSelected ? AppColors.primary : AppColors.textDark,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? const Color(0xFF006767) : AppColors.textDark,
+              ),
+            ),
+            if (isSelected)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF006767),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      CupertinoIcons.checkmark,
+                      color: Colors.white,
+                      size: 10,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                displayPrice,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? AppColors.primary : AppColors.textGray,
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -353,208 +746,407 @@ class _ParentTopUpScreenState extends ConsumerState<ParentTopUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryTeal = Color(0xFF006767);
+    const Color bgWarm = Color(0xFFFBF9F8);
+    const Color borderOutline = Color(0xFFE4E2E1);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        shape: Border(
-          bottom: BorderSide(color: const Color(0xFFBDC9C8).withValues(alpha: 0.3), width: 0.5),
-        ),
-        leading: IconButton(
-          icon: const Icon(CupertinoIcons.left_chevron, color: AppColors.primary),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Top-up Saldo Online',
-          style: GoogleFonts.inter(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: AppColors.primary,
+      backgroundColor: bgWarm,
+      body: Column(
+        children: [
+          // Header Bar
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: borderOutline, width: 1),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(CupertinoIcons.arrow_left, color: primaryTeal, size: 22),
+                  onPressed: () => context.pop(),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Kantin Digital',
+                  style: GoogleFonts.beVietnamPro(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: primaryTeal,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Receiver Student Header
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.borderLight, width: 0.5),
-                    ),
-                    child: Row(
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 700),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Icon(CupertinoIcons.arrow_down_circle_fill, color: AppColors.primary, size: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        // Page title & subtitle
+                        Text(
+                          'Formulir Top-up Saldo Online',
+                          style: GoogleFonts.beVietnamPro(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(CupertinoIcons.person_fill, size: 14, color: AppColors.textGray),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$_studentName (Kelas $_studentClass)',
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 14,
+                                color: AppColors.textGray,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Form card
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: borderOutline, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Text('Siswa Penerima:', style: TextStyle(fontSize: 11, color: AppColors.textGray)),
-                              const SizedBox(height: 2),
-                              Text('$_studentName (Kelas $_studentClass)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                              // Decorative orange bar
+                              Container(height: 4, color: const Color(0xFFFF9500)),
+                              
+                              Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // Section 1: Nominal Choices
+                                    Text(
+                                      'Pilih Nominal Top-up',
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    GridView.count(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 2.2,
+                                      children: [
+                                        _buildQuickAmountItem(20000, 'Rp 20.000'),
+                                        _buildQuickAmountItem(50000, 'Rp 50.000'),
+                                        _buildQuickAmountItem(100000, 'Rp 100.000'),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Custom input box
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Atau Kustom (Minimal Rp 10.000)',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.textGray,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: borderOutline, width: 1),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                'Rp ',
+                                                style: GoogleFonts.beVietnamPro(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textDark,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: TextFormField(
+                                                  controller: _customAmountController,
+                                                  keyboardType: TextInputType.number,
+                                                  onChanged: _onCustomAmountChanged,
+                                                  style: GoogleFonts.beVietnamPro(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: AppColors.textDark,
+                                                  ),
+                                                  decoration: InputDecoration(
+                                                    hintText: '0',
+                                                    hintStyle: GoogleFonts.beVietnamPro(color: AppColors.textGray.withValues(alpha: 0.5)),
+                                                    border: InputBorder.none,
+                                                    enabledBorder: InputBorder.none,
+                                                    focusedBorder: InputBorder.none,
+                                                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                                    filled: false,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 24),
+                                    const Divider(color: borderOutline, height: 1),
+                                    const SizedBox(height: 24),
+
+                                    // Section 2: Sender Details
+                                    Text(
+                                      'Detail Pengirim',
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Sender Name Input
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Nama Pengirim',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.textGray,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: borderOutline, width: 1),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(CupertinoIcons.profile_circled, color: AppColors.textGray, size: 20),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: TextFormField(
+                                                  controller: _senderNameController,
+                                                  keyboardType: TextInputType.name,
+                                                  style: GoogleFonts.beVietnamPro(fontSize: 14),
+                                                  decoration: const InputDecoration(
+                                                    border: InputBorder.none,
+                                                    enabledBorder: InputBorder.none,
+                                                    focusedBorder: InputBorder.none,
+                                                    contentPadding: EdgeInsets.symmetric(vertical: 14),
+                                                    filled: false,
+                                                  ),
+                                                  validator: (value) {
+                                                    if (value == null || value.trim().isEmpty) {
+                                                      return 'Nama pengirim wajib diisi';
+                                                    }
+                                                    return null;
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Sender Phone Input
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Nomor WA/HP',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.textGray,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: borderOutline, width: 1),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(CupertinoIcons.phone, color: AppColors.textGray, size: 20),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: TextFormField(
+                                                  controller: _senderPhoneController,
+                                                  keyboardType: TextInputType.phone,
+                                                  style: GoogleFonts.beVietnamPro(fontSize: 14),
+                                                  decoration: const InputDecoration(
+                                                    border: InputBorder.none,
+                                                    enabledBorder: InputBorder.none,
+                                                    focusedBorder: InputBorder.none,
+                                                    contentPadding: EdgeInsets.symmetric(vertical: 14),
+                                                    filled: false,
+                                                  ),
+                                                  validator: (value) {
+                                                    if (value == null || value.trim().isEmpty) {
+                                                      return 'Nomor WA/HP wajib diisi';
+                                                    }
+                                                    return null;
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Nota tagihan akan dikirimkan ke nomor ini.',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 11,
+                                            color: AppColors.textGray,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 32),
+
+                                    if (_errorMessage != null) ...[
+                                      Text(
+                                        _errorMessage!,
+                                        style: GoogleFonts.beVietnamPro(
+                                          color: AppColors.error,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
+
+                                    // Pay button
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryTeal,
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(999), // pill shape per HTML button
+                                        ),
+                                      ),
+                                      onPressed: _showMidtransSnapModal,
+                                      icon: const Icon(CupertinoIcons.creditcard, color: Colors.white, size: 16),
+                                      label: Text(
+                                        'BAYAR SEKARANG VIA MIDTRANS',
+                                        style: GoogleFonts.beVietnamPro(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(CupertinoIcons.lock_fill, color: AppColors.textGray, size: 12),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Pembayaran aman dan terenkripsi',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 12,
+                                            color: AppColors.textGray,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                  const Text(
-                    'Pilih Nominal Top-Up:',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Grid Choice
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 1.4,
-                    children: [
-                      _buildQuickAmountItem(20000, '20k', 'Rp 20.000'),
-                      _buildQuickAmountItem(50000, '50k', 'Rp 50.000'),
-                      _buildQuickAmountItem(100000, '100k', 'Rp 100.000'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Custom Input Text Field
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.borderLight, width: 0.5),
-                    ),
-                    child: Row(
-                      children: [
-                        const Text(
-                          'Atau Kustom: Rp ',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark, fontSize: 14),
-                        ),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _customAmountController,
-                            keyboardType: TextInputType.number,
-                            onChanged: _onCustomAmountChanged,
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 16),
-                            decoration: const InputDecoration(
-                              hintText: 'e.g. 150000',
-                              hintStyle: TextStyle(color: Color(0xFFBDC9C8), fontSize: 14),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
+                        // Back link
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: () => context.pop(),
+                            icon: const Icon(CupertinoIcons.left_chevron, color: primaryTeal, size: 14),
+                            label: Text(
+                              'Kembali Pantau Anak',
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: primaryTeal,
+                              ),
                             ),
                           ),
                         ),
+                        const SizedBox(height: 48),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 28),
-
-                  const Text(
-                    'Data Pengirim (Orang Tua):',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Sender Name & Phone
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.borderLight, width: 0.5),
-                    ),
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _senderNameController,
-                          keyboardType: TextInputType.name,
-                          style: const TextStyle(fontSize: 14),
-                          decoration: const InputDecoration(
-                            labelText: 'Nama Lengkap Pengirim',
-                            labelStyle: TextStyle(color: AppColors.textGray, fontSize: 13),
-                            hintText: 'e.g. Budi Subarjo',
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(vertical: 4),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Nama pengirim wajib diisi';
-                            }
-                            return null;
-                          },
-                        ),
-                        const Divider(height: 1, color: AppColors.borderLight),
-                        TextFormField(
-                          controller: _senderPhoneController,
-                          keyboardType: TextInputType.phone,
-                          style: const TextStyle(fontSize: 14),
-                          decoration: const InputDecoration(
-                            labelText: 'Nomor WhatsApp / HP',
-                            labelStyle: TextStyle(color: AppColors.textGray, fontSize: 13),
-                            hintText: 'e.g. 08123456789',
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(vertical: 4),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Nomor WhatsApp wajib diisi';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.bold)),
-                  ],
-
-                  const SizedBox(height: 32),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
-                      ),
-                      onPressed: _showCheckoutSheet,
-                      child: const Text(
-                        'BAYAR SEKARANG VIA MIDTRANS',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+          
+          // Minimal Footer
+          Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF6F3F2),
+              border: Border(top: BorderSide(color: borderOutline, width: 1)),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text(
+                '© 2024 Kantin Digital. All rights reserved.',
+                style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppColors.textGray),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

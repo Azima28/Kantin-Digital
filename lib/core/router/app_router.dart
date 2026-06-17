@@ -22,6 +22,7 @@ import 'package:kantin_digital/features/siswa/widgets/siswa_main_layout.dart';
 import 'package:kantin_digital/features/parent/screens/parent_dashboard_screen.dart';
 import 'package:kantin_digital/features/parent/screens/parent_topup_screen.dart';
 import 'package:kantin_digital/features/parent/screens/parent_receipt_screen.dart';
+import 'package:kantin_digital/features/parent/screens/parent_portal_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -79,7 +80,7 @@ class AppRouter {
       // Parent Routes
       GoRoute(
         path: parentHome,
-        builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
+        builder: (BuildContext context, GoRouterState state) => const ParentPortalScreen(),
       ),
       GoRoute(
         path: parentDashboard,
