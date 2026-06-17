@@ -1392,15 +1392,23 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
                 style: GoogleFonts.beVietnamPro(color: primaryTeal, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
-            Text(
-              _currentIndex == 0
-                  ? 'Beranda Wali'
-                  : _currentIndex == 1
-                      ? 'Analisis Jajan'
-                      : _currentIndex == 2
-                          ? 'Riwayat Saku'
-                          : 'Pengaturan',
-              style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  _currentIndex == 0
+                      ? 'Beranda Wali'
+                      : _currentIndex == 1
+                          ? 'Analisis Jajan'
+                          : _currentIndex == 2
+                              ? 'Riwayat Saku'
+                              : 'Pengaturan',
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                ),
+              ),
             ),
             const Icon(CupertinoIcons.bell, color: primaryTeal, size: 20),
           ],

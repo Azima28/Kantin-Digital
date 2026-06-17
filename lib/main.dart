@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:kantin_digital/core/router/app_router.dart';
 import 'package:kantin_digital/core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inisialisasi format tanggal bahasa Indonesia
+  await initializeDateFormatting('id_ID', null);
   
   // Inisialisasi Supabase
   // Catatan: Menggunakan parameter default, silakan konfigurasi URL & Anon Key di proyek Anda
