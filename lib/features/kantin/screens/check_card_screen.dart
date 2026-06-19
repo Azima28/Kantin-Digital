@@ -7,6 +7,8 @@ import 'package:kantin_digital/core/services/nfc_service.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/core/widgets/nfc_pulse_animator.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
+import 'package:kantin_digital/features/shared/screens/student_transactions_screen.dart';
+import 'package:intl/intl.dart';
 
 class CheckCardScreen extends ConsumerStatefulWidget {
   const CheckCardScreen({super.key});
@@ -19,6 +21,7 @@ class _CheckCardScreenState extends ConsumerState<CheckCardScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _studentData;
   String? _errorMessage;
+  List<Map<String, dynamic>> _transactions = [];
 
   @override
   void initState() {
@@ -62,6 +65,7 @@ class _CheckCardScreenState extends ConsumerState<CheckCardScreen> {
       _isLoading = true;
       _errorMessage = null;
       _studentData = null;
+      _transactions = [];
     });
 
     try {
@@ -82,8 +86,17 @@ class _CheckCardScreenState extends ConsumerState<CheckCardScreen> {
         return;
       }
 
+      // Fetch 10 latest transactions
+      final List<dynamic> txs = await client
+          .from('transactions')
+          .select('id, total_amount, type, status, created_at, canteen_operators(canteen_name)')
+          .eq('student_id', student['id'])
+          .order('created_at', ascending: false)
+          .limit(10);
+
       setState(() {
         _studentData = student;
+        _transactions = List<Map<String, dynamic>>.from(txs);
         _isLoading = false;
       });
     } catch (e) {
@@ -98,6 +111,7 @@ class _CheckCardScreenState extends ConsumerState<CheckCardScreen> {
     setState(() {
       _studentData = null;
       _errorMessage = null;
+      _transactions = [];
     });
     _startNfcScan();
   }
@@ -419,6 +433,145 @@ class _CheckCardScreenState extends ConsumerState<CheckCardScreen> {
                     letterSpacing: -0.5,
                   ),
                 ),
+              ],
+            ),
+          ),
+          const Divider(height: 0.5, color: AppColors.borderLight),
+          // Riwayat Transaksi Card
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'RIWAYAT TRANSAKSI (10 TERAKHIR)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textGray,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => StudentTransactionsScreen(
+                              studentId: data['id'],
+                              primaryColor: AppColors.primary,
+                              accentColor: AppColors.accentOrange,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Lihat Semua',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_transactions.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Center(
+                      child: Text(
+                        'Belum ada transaksi.',
+                        style: GoogleFonts.beVietnamPro(
+                          fontSize: 13,
+                          color: AppColors.textGray,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    children: _transactions.map((tx) {
+                      final type = tx['type']?.toString() ?? 'purchase';
+                      final isTopup = type == 'topup';
+                      final status = tx['status']?.toString() ?? 'success';
+                      final isSuccess = status == 'success';
+                      final double amount = double.tryParse(tx['total_amount']?.toString() ?? '0') ?? 0.0;
+                      final timestamp = DateTime.tryParse(tx['created_at']?.toString() ?? '')?.toLocal() ?? DateTime.now();
+                      final timeStr = DateFormat('dd MMM, HH:mm', 'id_ID').format(timestamp);
+                      final canteenName = tx['canteen_operators']?['canteen_name']?.toString() ?? 'Top-up';
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: isTopup
+                                      ? const Color(0xFF006A35).withValues(alpha: 0.08)
+                                      : AppColors.primary.withValues(alpha: 0.08),
+                                  child: Icon(
+                                    isTopup ? CupertinoIcons.arrow_up : CupertinoIcons.cart,
+                                    size: 14,
+                                    color: isTopup ? const Color(0xFF006A35) : AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isTopup ? 'Top-Up Saldo' : canteenName,
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                    Text(
+                                      timeStr,
+                                      style: GoogleFonts.beVietnamPro(
+                                        fontSize: 11,
+                                        color: AppColors.textGray,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${isTopup ? "+" : "-"}${CurrencyFormatter.format(amount)}',
+                                  style: GoogleFonts.beVietnamPro(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: isTopup ? const Color(0xFF006A35) : AppColors.primary,
+                                  ),
+                                ),
+                                if (!isSuccess)
+                                  Text(
+                                    status.toUpperCase(),
+                                    style: GoogleFonts.beVietnamPro(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.error,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
               ],
             ),
           ),

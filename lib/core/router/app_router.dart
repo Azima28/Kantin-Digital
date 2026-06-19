@@ -47,6 +47,9 @@ import 'package:kantin_digital/features/keuangan/screens/keuangan_report_screen.
 import 'package:kantin_digital/features/keuangan/screens/keuangan_profile_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_settings_screen.dart';
 import 'package:kantin_digital/features/keuangan/widgets/keuangan_main_layout.dart';
+import 'package:kantin_digital/features/public/screens/public_home_screen.dart';
+import 'package:kantin_digital/features/public/screens/public_menu_screen.dart';
+import 'package:kantin_digital/features/public/screens/public_school_info_screen.dart';
 import 'package:kantin_digital/core/models/models.dart';
 
 class AppRouter {
@@ -56,7 +59,7 @@ class AppRouter {
   static const String login = '/login';
   
   // Student App Routes
-  static const String studentWelcome = '/student/welcome';
+  static const String studentWelcome = '/welcome';
   static const String studentLogin = '/student/login';
   static const String studentHome = '/student';
   static const String studentTopUp = '/student/topup';
@@ -106,6 +109,11 @@ class AppRouter {
   static const String financeProfile = '/finance/profile';
   static const String financeSettings = '/finance/settings';
 
+  // Public (No Auth Required)
+  static const String publicHome = '/public';
+  static const String publicMenu = '/public/menu';
+  static const String publicInfo = '/public/info';
+
   static final GoRouter router = GoRouter(
     initialLocation: splash,
     routes: <RouteBase>[
@@ -115,9 +123,28 @@ class AppRouter {
       ),
       GoRoute(
         path: login,
-        builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
+        builder: (BuildContext context, GoRouterState state) {
+          final from = state.uri.queryParameters['from'];
+          return LoginScreen(from: from);
+        },
       ),
-      
+
+      // ─── Public Routes (Tanpa Login) ───
+      GoRoute(
+        path: publicHome,
+        builder: (context, state) => const PublicHomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'menu',
+            builder: (context, state) => const PublicMenuScreen(),
+          ),
+          GoRoute(
+            path: 'info',
+            builder: (context, state) => const PublicSchoolInfoScreen(),
+          ),
+        ],
+      ),
+
       // Siswa Welcome & Login
       GoRoute(
         path: studentWelcome,
@@ -125,7 +152,10 @@ class AppRouter {
       ),
       GoRoute(
         path: studentLogin,
-        builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
+        builder: (BuildContext context, GoRouterState state) {
+          final from = state.uri.queryParameters['from'];
+          return LoginScreen(from: from);
+        },
       ),
 
       // Parent Routes
