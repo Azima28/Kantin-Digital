@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-import 'package:kantin_digital/features/keuangan/screens/keuangan_student_detail_screen.dart';
+import 'package:kantin_digital/features/keuangan/providers/keuangan_providers.dart';
 
 class KeuanganCardRegistrationScreen extends ConsumerStatefulWidget {
   final String studentId;

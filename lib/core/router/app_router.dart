@@ -38,13 +38,16 @@ import 'package:kantin_digital/features/admin/widgets/admin_main_layout.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_dashboard_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_students_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_student_detail_screen.dart';
+import 'package:kantin_digital/features/keuangan/screens/keuangan_users_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_card_registration_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_topup_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_correction_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_history_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_report_screen.dart';
 import 'package:kantin_digital/features/keuangan/screens/keuangan_profile_screen.dart';
+import 'package:kantin_digital/features/keuangan/screens/keuangan_settings_screen.dart';
 import 'package:kantin_digital/features/keuangan/widgets/keuangan_main_layout.dart';
+import 'package:kantin_digital/core/models/models.dart';
 
 class AppRouter {
   AppRouter._();
@@ -91,13 +94,17 @@ class AppRouter {
   // Keuangan App Routes
   static const String financeHome = '/finance';
   static const String financeStudents = '/finance/students';
+  static const String financeUsers = '/finance/users';
   static const String financeStudentDetail = '/finance/students/:studentId';
   static const String financeCardReg = '/finance/students/:studentId/card';
+  static const String financeMerchantDetail = '/finance/users/merchant/:merchantId';
+  static const String financeParentDetail = '/finance/users/parent/:parentId';
   static const String financeTopUp = '/finance/topup';
   static const String financeCorrection = '/finance/correction';
   static const String financeHistory = '/finance/history';
   static const String financeReport = '/finance/report';
   static const String financeProfile = '/finance/profile';
+  static const String financeSettings = '/finance/settings';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -285,12 +292,20 @@ class AppRouter {
         },
         routes: <RouteBase>[
           GoRoute(
+            path: financeSettings,
+            builder: (BuildContext context, GoRouterState state) => const KeuanganSettingsScreen(),
+          ),
+          GoRoute(
             path: financeHome,
             builder: (BuildContext context, GoRouterState state) => const KeuanganDashboardScreen(),
           ),
           GoRoute(
             path: financeStudents,
             builder: (BuildContext context, GoRouterState state) => const KeuanganStudentsScreen(),
+          ),
+          GoRoute(
+            path: financeUsers,
+            builder: (BuildContext context, GoRouterState state) => const KeuanganUsersScreen(),
           ),
           GoRoute(
             path: financeHistory,
@@ -317,16 +332,28 @@ class AppRouter {
         ),
       ),
       GoRoute(
+        path: financeMerchantDetail,
+        builder: (BuildContext context, GoRouterState state) => AdminMerchantDetailScreen(
+          merchantId: state.pathParameters['merchantId']!,
+        ),
+      ),
+      GoRoute(
+        path: financeParentDetail,
+        builder: (BuildContext context, GoRouterState state) => AdminParentDetailScreen(
+          parentId: state.pathParameters['parentId']!,
+        ),
+      ),
+      GoRoute(
         path: financeTopUp,
         builder: (BuildContext context, GoRouterState state) {
-          final student = state.extra as Map<String, dynamic>?;
+          final student = state.extra as StudentWithProfile?;
           return KeuanganTopupScreen(prefilledStudent: student);
         },
       ),
       GoRoute(
         path: financeCorrection,
         builder: (BuildContext context, GoRouterState state) {
-          final student = state.extra as Map<String, dynamic>?;
+          final student = state.extra as StudentWithProfile?;
           return KeuanganCorrectionScreen(prefilledStudent: student);
         },
       ),

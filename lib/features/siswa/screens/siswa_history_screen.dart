@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/features/siswa/providers/siswa_providers.dart';
 
@@ -18,14 +19,14 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
   String _searchQuery = '';
   int _selectedFilterIndex = 0; // 0: Semua, 1: Jajan, 2: Top-Up
 
-  void _showTransactionDetail(BuildContext context, Map<String, dynamic> tx) {
-    final String txId = tx['id']?.toString() ?? '';
-    final String type = tx['type']?.toString() ?? 'purchase';
-    final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-    final String timeStr = tx['created_at'] != null 
-        ? DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
+  void _showTransactionDetail(BuildContext context, OperatorTransaction tx) {
+    final String txId = tx.id;
+    final String type = tx.type ?? 'purchase';
+    final double amount = tx.totalAmount;
+    final String timeStr = tx.createdAt != null 
+        ? DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt!.toLocal())
         : '-';
-    final String canteenName = tx['canteen_operators']?['canteen_name'] ?? 'Kantin';
+    final String canteenName = tx.canteenName ?? 'Kantin';
 
     showModalBottomSheet(
       context: context,
@@ -130,9 +131,9 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
                             itemCount: items.length,
                             itemBuilder: (context, i) {
                               final item = items[i];
-                              final String name = item['products']?['name'] ?? 'Jajanan';
-                              final double itemPrice = double.tryParse(item['unit_price'].toString()) ?? 0.0;
-                              final int qty = int.tryParse(item['quantity'].toString()) ?? 1;
+                              final String name = item.productName;
+                              final double itemPrice = item.unitPrice;
+                              final int qty = item.quantity;
 
                               return Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -202,15 +203,15 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
   }
 
   // Groups list items into sections based on date
-  Map<String, List<Map<String, dynamic>>> _groupTransactionsByDate(List<Map<String, dynamic>> txs) {
-    final Map<String, List<Map<String, dynamic>>> groups = {};
+  Map<String, List<OperatorTransaction>> _groupTransactionsByDate(List<OperatorTransaction> txs) {
+    final Map<String, List<OperatorTransaction>> groups = {};
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
     final yesterdayStr = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
 
     for (var tx in txs) {
-      if (tx['created_at'] == null) continue;
-      final txDate = DateTime.parse(tx['created_at']).toLocal();
+      if (tx.createdAt == null) continue;
+      final txDate = tx.createdAt!.toLocal();
       final dateKey = DateFormat('yyyy-MM-dd').format(txDate);
 
       String sectionTitle;
@@ -317,11 +318,11 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
                 // History Transactions Grouped List
                 Expanded(
                   child: transactionsAsync.when(
-                    data: (List<Map<String, dynamic>> txs) {
+                    data: (List<OperatorTransaction> txs) {
                       // Apply filter & search
                       final filteredTxs = txs.where((tx) {
-                        final String type = tx['type']?.toString() ?? 'purchase';
-                        final String canteenName = (tx['canteen_operators']?['canteen_name'] ?? 'Kantin').toString().toLowerCase();
+                        final String type = tx.type ?? 'purchase';
+                        final String canteenName = (tx.canteenName ?? 'Kantin').toLowerCase();
                         
                         // Filter match
                         if (_selectedFilterIndex == 1 && type != 'purchase') return false;
@@ -403,12 +404,12 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
                                   ),
                                   itemBuilder: (context, index) {
                                     final tx = sectionItems[index];
-                                    final String type = tx['type']?.toString() ?? 'purchase';
-                                    final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                                    final String canteenName = tx['canteen_operators']?['canteen_name'] ?? 'Kantin';
+                                    final String type = tx.type ?? 'purchase';
+                                    final double amount = tx.totalAmount;
+                                    final String canteenName = tx.canteenName ?? 'Kantin';
                                     final bool isTopup = type == 'topup';
-                                    final String timeStr = tx['created_at'] != null 
-                                        ? DateFormat('HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
+                                    final String timeStr = tx.createdAt != null 
+                                        ? DateFormat('HH:mm').format(tx.createdAt!.toLocal())
                                         : '-';
 
                                     return ListTile(

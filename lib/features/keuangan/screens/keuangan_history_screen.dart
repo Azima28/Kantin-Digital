@@ -3,26 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
+import 'package:kantin_digital/features/keuangan/providers/keuangan_providers.dart';
 
-final keuanganHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final client = ref.read(supabaseClientProvider);
-  final profile = ref.read(authNotifierProvider).profile;
-  final actorId = profile?['id'];
-
-  // Guard: if actor ID is not available, return empty list
-  if (actorId == null || actorId.toString().isEmpty) {
-    return <Map<String, dynamic>>[];
-  }
-
-  final List<dynamic> res = await client
-      .from('audit_logs')
-      .select('id, action_type, description, created_at, old_value, new_value, target_id')
-      .eq('actor_id', actorId)
-      .order('created_at', ascending: false);
-
-  return List<Map<String, dynamic>>.from(res);
-});
+// keuanganHistoryProvider is defined in keuangan_providers.dart
 
 class KeuanganHistoryScreen extends ConsumerStatefulWidget {
   const KeuanganHistoryScreen({super.key});

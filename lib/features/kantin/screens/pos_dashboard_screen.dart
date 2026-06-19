@@ -6,6 +6,7 @@ import 'package:kantin_digital/core/constants/app_colors.dart';
 import 'package:kantin_digital/core/constants/app_strings.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/features/kantin/providers/cart_provider.dart';
 import 'package:kantin_digital/features/kantin/providers/pos_providers.dart';
 
@@ -182,10 +183,10 @@ class _PosDashboardScreenState extends ConsumerState<PosDashboardScreen> {
 
                 // Products Grid Catalog
                 productsAsync.when(
-                  data: (List<Map<String, dynamic>> products) {
+                  data: (List<Product> products) {
                     // Filter based on active category
                     final filteredProducts = products.where((product) {
-                      final category = product['category']?.toString().toLowerCase();
+                      final category = product.category.toLowerCase();
                       if (_selectedCategoryIndex == 1) return category == 'makanan';
                       if (_selectedCategoryIndex == 2) return category == 'minuman';
                       return true; // Semua
@@ -241,11 +242,11 @@ class _PosDashboardScreenState extends ConsumerState<PosDashboardScreen> {
                         delegate: SliverChildBuilderDelegate(
                           (BuildContext ctx, int index) {
                             final product = filteredProducts[index];
-                            final id = product['id']?.toString() ?? '';
-                            final name = product['name']?.toString() ?? 'Jajanan';
-                            final category = product['category']?.toString() ?? 'makanan';
-                            final price = double.tryParse(product['price'].toString()) ?? 0.0;
-                            final imageUrl = product['image_url']?.toString();
+                            final id = product.id;
+                            final name = product.name;
+                            final category = product.category;
+                            final price = product.price;
+                            final imageUrl = product.imageUrl;
 
                             return Container(
                               decoration: BoxDecoration(

@@ -6,31 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminStudentDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  // 1. Fetch profile
-  final profile = await client.from('profiles').select().eq('id', id).single();
-  
-  // 2. Fetch student
-  final student = await client.from('students').select().eq('id', id).single();
-  
-  // 3. Fetch recent transactions
-  final List<dynamic> txs = await client
-      .from('transactions')
-      .select('id, total_amount, type, status, created_at, canteen_operators(canteen_name)')
-      .eq('student_id', id)
-      .order('created_at', ascending: false)
-      .limit(10);
-      
-  return {
-    'profile': profile,
-    'student': student,
-    'transactions': List<Map<String, dynamic>>.from(txs),
-  };
-});
+import 'package:kantin_digital/core/models/models.dart';
 
 class AdminStudentDetailScreen extends ConsumerStatefulWidget {
   final String studentId;
@@ -325,21 +303,19 @@ class _AdminStudentDetailScreenState extends ConsumerState<AdminStudentDetailScr
       ),
       body: studentAsync.when(
         data: (data) {
-          final profile = data['profile'];
-          final student = data['student'];
-          final List<Map<String, dynamic>> txs = data['transactions'];
+          final profile = data.profile;
+          final student = data.student;
+          final List<OperatorTransaction> txs = data.recentTransactions;
 
-          final String fullName = profile['full_name'] ?? '';
-          final String email = profile['email'] ?? '';
-          final String username = profile['username'] ?? '';
-          final String nisn = profile['nisn'] ?? '';
-          final String className = student['class'] ?? 'Belum Diisi';
-          final double balance = double.tryParse(student['balance']?.toString() ?? '0') ?? 0.0;
-          final double? dailyLimit = student['daily_limit'] != null 
-              ? double.tryParse(student['daily_limit'].toString()) 
-              : null;
-          final String rfidUid = student['rfid_uid'] ?? 'Belum Terdaftar';
-          final bool isCardActive = student['is_active'] ?? true;
+          final String fullName = profile.fullName ?? '';
+          final String email = profile.email ?? '';
+          final String username = profile.username ?? '';
+          final String nisn = profile.nisn ?? '';
+          final String className = student.class_ ?? 'Belum Diisi';
+          final double balance = student.balance;
+          final double? dailyLimit = student.dailyLimit;
+          final String rfidUid = student.rfidUid ?? 'Belum Terdaftar';
+          final bool isCardActive = student.isActive;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -435,7 +411,7 @@ class _AdminStudentDetailScreenState extends ConsumerState<AdminStudentDetailScr
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => _showChangePasswordDialog(profile['id']),
+                        onTap: () => _showChangePasswordDialog(profile.id),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
@@ -463,7 +439,7 @@ class _AdminStudentDetailScreenState extends ConsumerState<AdminStudentDetailScr
                     const SizedBox(width: 12),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => _toggleFreezeCard(profile['id'], isCardActive),
+                        onTap: () => _toggleFreezeCard(profile.id, isCardActive),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
@@ -551,13 +527,10 @@ class _AdminStudentDetailScreenState extends ConsumerState<AdminStudentDetailScr
                 else
                   Column(
                     children: txs.map((tx) {
-                      final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                      final type = tx['type'] ?? 'purchase';
-                      final bool isTopup = type == 'topup';
-                      final String canteen = tx['canteen_operators']?['canteen_name'] ?? 'Stan Kantin';
-                      final date = tx['created_at'] != null 
-                          ? DateTime.parse(tx['created_at']).toLocal() 
-                          : DateTime.now();
+                      final double amount = tx.totalAmount;
+                      final bool isTopup = tx.isTopup;
+                      final String canteen = tx.canteenName ?? 'Stan Kantin';
+                      final date = tx.createdAt?.toLocal() ?? DateTime.now();
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),

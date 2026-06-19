@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
 import 'package:kantin_digital/features/kantin/providers/pos_providers.dart';
 import 'package:intl/intl.dart';
@@ -323,11 +324,11 @@ class PosHomeScreen extends ConsumerWidget {
 
               // Transactions List (Only show today's)
               transactionsAsync.when(
-                data: (List<Map<String, dynamic>> txs) {
+                data: (List<OperatorTransaction> txs) {
                   final now = DateTime.now();
                   final todayTxs = txs.where((tx) {
-                    if (tx['created_at'] == null) return false;
-                    final txDate = DateTime.parse(tx['created_at']).toLocal();
+                    if (tx.createdAt == null) return false;
+                    final txDate = tx.createdAt!.toLocal();
                     return txDate.year == now.year && txDate.month == now.month && txDate.day == now.day;
                   }).toList();
 
@@ -355,13 +356,13 @@ class PosHomeScreen extends ConsumerWidget {
 
                   return Column(
                     children: todayTxs.map((tx) {
-                      final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                      final String studentName = tx['students']?['profiles']?['full_name'] ?? 'Siswa';
-                      final String status = tx['status']?.toString() ?? 'success';
+                      final double amount = tx.totalAmount;
+                      final String studentName = tx.studentName ?? 'Siswa';
+                      final String status = tx.status ?? 'success';
                       final bool isCancelled = status == 'cancelled';
                       
-                      final txTime = tx['created_at'] != null 
-                          ? DateFormat('HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
+                      final txTime = tx.createdAt != null 
+                          ? DateFormat('HH:mm').format(tx.createdAt!.toLocal())
                           : '-';
 
                       return Container(

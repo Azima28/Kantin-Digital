@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
 import 'package:kantin_digital/features/siswa/providers/siswa_providers.dart';
@@ -68,14 +69,14 @@ class SiswaDashboardScreen extends ConsumerWidget {
   }
 
   // Open transaction detail bottom sheet
-  void _showTransactionDetail(BuildContext context, WidgetRef ref, Map<String, dynamic> tx) {
-    final String txId = tx['id']?.toString() ?? '';
-    final String type = tx['type']?.toString() ?? 'purchase';
-    final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-    final String timeStr = tx['created_at'] != null 
-        ? DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
+  void _showTransactionDetail(BuildContext context, WidgetRef ref, OperatorTransaction tx) {
+    final String txId = tx.id;
+    final String type = tx.type ?? 'purchase';
+    final double amount = tx.totalAmount;
+    final String timeStr = tx.createdAt != null 
+        ? DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt!.toLocal())
         : '-';
-    final String canteenName = tx['canteen_operators']?['canteen_name'] ?? 'Kantin';
+    final String canteenName = tx.canteenName ?? 'Kantin';
 
     showModalBottomSheet(
       context: context,
@@ -182,9 +183,9 @@ class SiswaDashboardScreen extends ConsumerWidget {
                             itemCount: items.length,
                             itemBuilder: (context, i) {
                               final item = items[i];
-                              final String name = item['products']?['name'] ?? 'Jajanan';
-                              final double itemPrice = double.tryParse(item['unit_price'].toString()) ?? 0.0;
-                              final int qty = int.tryParse(item['quantity'].toString()) ?? 1;
+                              final String name = item.productName;
+                              final double itemPrice = item.unitPrice;
+                              final int qty = item.quantity;
 
                               return Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -341,9 +342,9 @@ class SiswaDashboardScreen extends ConsumerWidget {
               studentAsync.when(
                 data: (student) {
                   if (student == null) return const SizedBox();
-                  final double balance = double.tryParse(student['balance'].toString()) ?? 0.0;
-                  final bool isActive = student['is_active'] ?? true;
-                  final String studentId = student['id'];
+                  final double balance = student.balance;
+                  final bool isActive = student.isActive;
+                  final String studentId = student.id;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,11 +553,11 @@ class SiswaDashboardScreen extends ConsumerWidget {
 
               // Transactions List (Only show today's)
               transactionsAsync.when(
-                data: (List<Map<String, dynamic>> txs) {
+                data: (List<OperatorTransaction> txs) {
                   final now = DateTime.now();
                   final todayTxs = txs.where((tx) {
-                    if (tx['created_at'] == null) return false;
-                    final txDate = DateTime.parse(tx['created_at']).toLocal();
+                    if (tx.createdAt == null) return false;
+                    final txDate = tx.createdAt!.toLocal();
                     return txDate.year == now.year && txDate.month == now.month && txDate.day == now.day;
                   }).toList();
 
@@ -584,12 +585,12 @@ class SiswaDashboardScreen extends ConsumerWidget {
 
                   return Column(
                     children: todayTxs.map((tx) {
-                      final String type = tx['type']?.toString() ?? 'purchase';
-                      final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                      final String canteenName = tx['canteen_operators']?['canteen_name'] ?? 'Kantin';
+                      final String type = tx.type ?? 'purchase';
+                      final double amount = tx.totalAmount;
+                      final String canteenName = tx.canteenName ?? 'Kantin';
                       
-                      final txTime = tx['created_at'] != null 
-                          ? DateFormat('HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
+                      final txTime = tx.createdAt != null 
+                          ? DateFormat('HH:mm').format(tx.createdAt!.toLocal())
                           : '-';
 
                       final bool isTopup = type == 'topup';

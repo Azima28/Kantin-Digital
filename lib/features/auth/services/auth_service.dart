@@ -97,13 +97,11 @@ class AuthService {
               .eq('id', userId)
               .maybeSingle();
         }
-        if (profile == null) {
-          profile = await _client
-              .from('profiles')
-              .select()
-              .eq('email', resolvedEmail)
-              .maybeSingle();
-        }
+        profile ??= await _client
+            .from('profiles')
+            .select()
+            .eq('email', resolvedEmail)
+            .maybeSingle();
       }
 
       // --- Step 4: Fallback — profiles-based password verification ---

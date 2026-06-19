@@ -4,19 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminUsersProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  // Fetch profiles with columns
-  final List<dynamic> res = await client
-      .from('profiles')
-      .select('id, full_name, email, role, username, nisn, is_active')
-      .order('full_name', ascending: true);
-      
-  return List<Map<String, dynamic>>.from(res);
-});
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -223,16 +212,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 final dbRoleFilter = _getDbRoleKey(_selectedRoleFilter);
                 var filtered = users;
                 if (dbRoleFilter != null) {
-                  filtered = filtered.where((u) => u['role'] == dbRoleFilter).toList();
+                  filtered = filtered.where((u) => u.role == dbRoleFilter).toList();
                 }
 
                 // Filter by search query
                 if (_searchQuery.isNotEmpty) {
                   filtered = filtered.where((u) {
-                    final fullName = (u['full_name'] ?? '').toString().toLowerCase();
-                    final email = (u['email'] ?? '').toString().toLowerCase();
-                    final username = (u['username'] ?? '').toString().toLowerCase();
-                    final nisn = (u['nisn'] ?? '').toString().toLowerCase();
+                    final fullName = (u.fullName ?? '').toLowerCase();
+                    final email = (u.email ?? '').toLowerCase();
+                    final username = (u.username ?? '').toLowerCase();
+                    final nisn = (u.nisn ?? '').toLowerCase();
                     return fullName.contains(_searchQuery) ||
                         email.contains(_searchQuery) ||
                         username.contains(_searchQuery) ||
@@ -262,13 +251,13 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final user = filtered[index];
-                      final String id = user['id'] ?? '';
-                      final String fullName = user['full_name'] ?? 'User Baru';
-                      final String role = user['role'] ?? 'student';
-                      final String email = user['email'] ?? '';
-                      final String username = user['username'] ?? '';
-                      final String nisn = user['nisn'] ?? '';
-                      final bool isActive = user['is_active'] ?? true;
+                      final String id = user.id;
+                      final String fullName = user.fullName ?? 'User Baru';
+                      final String role = user.role ?? 'student';
+                      final String email = user.email ?? '';
+                      final String username = user.username ?? '';
+                      final String nisn = user.nisn ?? '';
+                      final bool isActive = user.isActive ?? true;
 
                       // Build descriptive subtitle
                       String subText = '';

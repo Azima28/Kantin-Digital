@@ -6,13 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-import 'package:kantin_digital/features/keuangan/screens/keuangan_dashboard_screen.dart';
-import 'package:kantin_digital/features/keuangan/screens/keuangan_students_screen.dart';
-import 'package:kantin_digital/features/keuangan/screens/keuangan_student_detail_screen.dart';
+import 'package:kantin_digital/features/keuangan/providers/keuangan_providers.dart';
 
 class KeuanganCorrectionScreen extends ConsumerStatefulWidget {
-  final Map<String, dynamic>? prefilledStudent;
+  final StudentWithProfile? prefilledStudent;
   const KeuanganCorrectionScreen({super.key, this.prefilledStudent});
 
   @override
@@ -25,8 +24,8 @@ class _KeuanganCorrectionScreenState extends ConsumerState<KeuanganCorrectionScr
   // Step 1: Search
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  Map<String, dynamic>? _selectedStudent;
-  List<Map<String, dynamic>> _searchResults = [];
+  StudentWithProfile? _selectedStudent;
+  List<StudentWithProfile> _searchResults = [];
   bool _hasSearched = false;
   Timer? _debounce;
 
@@ -120,7 +119,7 @@ class _KeuanganCorrectionScreenState extends ConsumerState<KeuanganCorrectionScr
           .limit(5);
 
       setState(() {
-        _searchResults = List<Map<String, dynamic>>.from(res);
+        _searchResults = res.map((e) => StudentWithProfile.fromJoinedJson(e as Map<String, dynamic>)).toList();
         _hasSearched = true;
       });
     } catch (e) {
@@ -180,7 +179,7 @@ class _KeuanganCorrectionScreenState extends ConsumerState<KeuanganCorrectionScr
       final actorName = profile?['full_name'] ?? 'Admin Keuangan';
       final actorId = profile?['id'];
       
-      final studentId = _selectedStudent!['id'];
+      final studentId = _selectedStudent!.id;
       final double amount = _getAmount();
       final double finalNewBalance = _getNewBalance();
       final String reason = _reasonController.text.trim();
@@ -240,9 +239,9 @@ class _KeuanganCorrectionScreenState extends ConsumerState<KeuanganCorrectionScr
     }
   }
 
-  String get _studentName => _selectedStudent?['full_name'] ?? 'Siswa';
-  String get _studentClass => _selectedStudent?['students']?['class'] ?? '-';
-  double get _studentBalance => double.tryParse(_selectedStudent?['students']?['balance']?.toString() ?? '0') ?? 0.0;
+  String get _studentName => _selectedStudent?.fullName ?? 'Siswa';
+  String get _studentClass => _selectedStudent?.class_ ?? '-';
+  double get _studentBalance => _selectedStudent?.balance ?? 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -456,9 +455,9 @@ class _KeuanganCorrectionScreenState extends ConsumerState<KeuanganCorrectionScr
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final student = _searchResults[index];
-              final name = student['full_name'] ?? 'Tanpa Nama';
-              final nisn = student['nisn'] ?? '-';
-              final className = student['students']?['class'] ?? '-';
+              final name = student.fullName;
+              final nisn = student.nisn ?? '-';
+              final className = student.class_ ?? '-';
               
               return Container(
                 decoration: BoxDecoration(

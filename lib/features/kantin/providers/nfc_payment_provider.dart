@@ -187,6 +187,8 @@ class NfcPaymentNotifier extends StateNotifier<NfcPaymentState> {
     required double totalAmount,
   }) async {
     if (state.studentUid == null) return false;
+    // Prevent double-tap: if already processing, ignore subsequent calls
+    if (state.status == NfcPaymentStatus.processingPurchase) return false;
     
     state = state.copyWith(status: NfcPaymentStatus.processingPurchase);
     try {

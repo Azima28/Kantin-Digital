@@ -5,18 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
-import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminAuditLogsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  final List<dynamic> res = await client
-      .from('audit_logs')
-      .select('id, actor_id, actor_name, action_type, description, target_id, old_value, new_value, ip_address, user_agent, created_at')
-      .order('created_at', ascending: false);
-      
-  return List<Map<String, dynamic>>.from(res);
-});
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
+import 'package:kantin_digital/core/models/models.dart';
 
 class AdminAuditLogScreen extends ConsumerStatefulWidget {
   const AdminAuditLogScreen({super.key});
@@ -43,7 +33,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
     }
   }
 
-  void _showLogDetailBottomSheet(Map<String, dynamic> log) {
+  void _showLogDetailBottomSheet(AuditLog log) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -52,9 +42,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        final date = log['created_at'] != null 
-            ? DateTime.parse(log['created_at']).toLocal() 
-            : DateTime.now();
+        final date = log.createdAt?.toLocal() ?? DateTime.now();
 
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
@@ -83,7 +71,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
 
                   // Detail Header
                   Text(
-                    log['action_type'].toString().replaceAll('_', ' '),
+                    log.actionType.toString().replaceAll('_', ' '),
                     style: GoogleFonts.beVietnamPro(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -93,10 +81,10 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                   const SizedBox(height: 16),
 
                   // Metadata cards
-                  _buildMetadataRow('Pelaksana', log['actor_name']),
+                  _buildMetadataRow('Pelaksana', log.actorName),
                   _buildMetadataRow('Tanggal & Waktu', DateFormat('dd MMM yyyy, HH:mm:ss').format(date)),
-                  _buildMetadataRow('IP Address', log['ip_address'] ?? '127.0.0.1'),
-                  _buildMetadataRow('User Agent', log['user_agent'] ?? 'Unknown Client'),
+                  _buildMetadataRow('IP Address', log.ipAddress ?? '127.0.0.1'),
+                  _buildMetadataRow('User Agent', log.userAgent ?? 'Unknown Client'),
                   const SizedBox(height: 24),
 
                   // JSON Diff Header
@@ -135,7 +123,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                const JsonEncoder.withIndent('  ').convert(log['old_value']),
+                                const JsonEncoder.withIndent('  ').convert(log.oldValue),
                                 style: const TextStyle(
                                   fontFamily: 'Courier',
                                   fontSize: 10,
@@ -168,7 +156,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                const JsonEncoder.withIndent('  ').convert(log['new_value']),
+                                const JsonEncoder.withIndent('  ').convert(log.newValue),
                                 style: const TextStyle(
                                   fontFamily: 'Courier',
                                   fontSize: 10,
@@ -305,7 +293,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
 
                 if (_selectedAction != 'All Actions') {
                   final dbActionKey = _mapActionTypeToFilter(_selectedAction);
-                  filtered = filtered.where((l) => l['action_type'] == dbActionKey).toList();
+                  filtered = filtered.where((l) => l.actionType == dbActionKey).toList();
                 }
 
                 if (filtered.isEmpty) {
@@ -330,12 +318,10 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final log = filtered[index];
-                      final String actionType = log['action_type'] ?? '';
-                      final String desc = log['description'] ?? '';
-                      final String actor = log['actor_name'] ?? 'System';
-                      final date = log['created_at'] != null 
-                          ? DateTime.parse(log['created_at']).toLocal() 
-                          : DateTime.now();
+                      final String actionType = log.actionType;
+                      final String desc = log.description;
+                      final String actor = log.actorName;
+                      final date = log.createdAt?.toLocal() ?? DateTime.now();
 
                       // Format time relative
                       final diff = DateTime.now().difference(date);

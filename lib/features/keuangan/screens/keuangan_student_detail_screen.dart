@@ -4,31 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
+import 'package:kantin_digital/features/keuangan/providers/keuangan_providers.dart';
 
-final keuanganStudentDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  // 1. Fetch profile
-  final profile = await client.from('profiles').select().eq('id', id).single();
-  
-  // 2. Fetch student
-  final student = await client.from('students').select().eq('id', id).single();
-  
-  // 3. Fetch recent transactions
-  final List<dynamic> txs = await client
-      .from('transactions')
-      .select('id, total_amount, type, status, created_at, canteen_operators(canteen_name)')
-      .eq('student_id', id)
-      .order('created_at', ascending: false)
-      .limit(10);
-      
-  return {
-    'profile': profile,
-    'student': student,
-    'transactions': List<Map<String, dynamic>>.from(txs),
-  };
-});
+// keuanganStudentDetailProvider is defined in keuangan_providers.dart
 
 class KeuanganStudentDetailScreen extends ConsumerStatefulWidget {
   final String studentId;
@@ -43,7 +23,85 @@ class _KeuanganStudentDetailScreenState extends ConsumerState<KeuanganStudentDet
   static const Color successGreen = Color(0xFF006A35);
   static const Color dangerRed = Color(0xFFBA1A1A);
 
+  final _passwordController = TextEditingController();
   bool _isUpdatingStatus = false;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _changePassword(String profileId) async {
+    final String password = _passwordController.text.trim();
+    if (password.isEmpty) return;
+
+    final client = ref.read(supabaseClientProvider);
+    try {
+      await client.from('profiles').update({'password': password}).eq('id', profileId);
+      
+      try {
+        await client.rpc('update_auth_user_password', params: {
+          'user_id': profileId,
+          'new_password': password,
+        });
+      } catch (_) {}
+
+      if (mounted) {
+        Navigator.pop(context);
+        _passwordController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kata sandi berhasil diperbarui!'),
+            backgroundColor: Color(0xFF006A35),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengubah kata sandi: $e'),
+            backgroundColor: const Color(0xFFBA1A1A),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showChangePasswordDialog(String profileId) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Ubah Kata Sandi'),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12.0),
+          child: CupertinoTextField(
+            controller: _passwordController,
+            placeholder: 'Masukkan sandi baru',
+            obscureText: true,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Batal'),
+            onPressed: () {
+              _passwordController.clear();
+              Navigator.pop(context);
+            },
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => _changePassword(profileId),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _toggleAccountStatus(bool currentStatus) async {
     final bool newStatus = !currentStatus;
@@ -148,22 +206,22 @@ class _KeuanganStudentDetailScreenState extends ConsumerState<KeuanganStudentDet
       body: SafeArea(
         child: detailAsync.when(
           data: (data) {
-            final profile = data['profile'] as Map<String, dynamic>;
-            final student = data['student'] as Map<String, dynamic>;
-            final txs = data['transactions'] as List<Map<String, dynamic>>;
+            final profile = data.profile;
+            final student = data.student;
+            final txs = data.recentTransactions;
 
-            final fullName = profile['full_name'] ?? 'Siswa';
-            final email = profile['email'] ?? '-';
-            final nisn = profile['nisn'] ?? '-';
-            final isActive = profile['is_active'] == true && student['is_active'] == true;
+            final fullName = profile.fullName ?? 'Siswa';
+            final email = profile.email ?? '-';
+            final nisn = profile.nisn ?? '-';
+            final isActive = profile.isActive == true && student.isActive;
 
-            final sClass = student['class'] ?? 'Belum Diisi';
-            final double balance = double.tryParse(student['balance']?.toString() ?? '0') ?? 0.0;
-            final String? rfid = student['rfid_uid'];
+            final sClass = student.class_ ?? 'Belum Diisi';
+            final double balance = student.balance;
+            final String? rfid = student.rfidUid;
             final hasCard = rfid != null && rfid.isNotEmpty;
 
-            final String lastTapStr = txs.isNotEmpty
-                ? DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(txs.first['created_at']).toLocal())
+            final String lastTapStr = txs.isNotEmpty && txs.first.createdAt != null
+                ? DateFormat('dd MMM yyyy, HH:mm').format(txs.first.createdAt!.toLocal())
                 : '-';
 
             return RefreshIndicator(
@@ -363,13 +421,16 @@ class _KeuanganStudentDetailScreenState extends ConsumerState<KeuanganStudentDet
                             iconColor: successGreen,
                             title: 'Top-Up Saldo Tunai',
                             onTap: () {
-                              final studentProfile = {
-                                'id': widget.studentId,
-                                'full_name': fullName,
-                                'nisn': nisn,
-                                'is_active': isActive,
-                                'students': student,
-                              };
+                              final studentProfile = StudentWithProfile(
+                                id: widget.studentId,
+                                fullName: fullName,
+                                email: email,
+                                nisn: nisn,
+                                isActive: isActive,
+                                class_: sClass,
+                                balance: balance,
+                                rfidUid: rfid,
+                              );
                               context.push('/finance/topup', extra: studentProfile);
                             },
                           ),
@@ -379,13 +440,16 @@ class _KeuanganStudentDetailScreenState extends ConsumerState<KeuanganStudentDet
                             iconColor: dangerRed,
                             title: 'Koreksi Saldo',
                             onTap: () {
-                              final studentProfile = {
-                                'id': widget.studentId,
-                                'full_name': fullName,
-                                'nisn': nisn,
-                                'is_active': isActive,
-                                'students': student,
-                              };
+                              final studentProfile = StudentWithProfile(
+                                id: widget.studentId,
+                                fullName: fullName,
+                                email: email,
+                                nisn: nisn,
+                                isActive: isActive,
+                                class_: sClass,
+                                balance: balance,
+                                rfidUid: rfid,
+                              );
                               context.push('/finance/correction', extra: studentProfile);
                             },
                           ),
@@ -397,6 +461,13 @@ class _KeuanganStudentDetailScreenState extends ConsumerState<KeuanganStudentDet
                             onTap: () {
                               context.push('/finance/students/${widget.studentId}/card');
                             },
+                          ),
+                          const Divider(height: 1, thickness: 0.5, indent: 56, color: Color(0xFFE4E2E1)),
+                          _buildActionTile(
+                            icon: Icons.key,
+                            iconColor: const Color(0xFF904D00),
+                            title: 'Ubah Kata Sandi',
+                            onTap: () => _showChangePasswordDialog(profile.id),
                           ),
                         ],
                       ),
@@ -443,12 +514,12 @@ class _KeuanganStudentDetailScreenState extends ConsumerState<KeuanganStudentDet
                           else
                             Column(
                               children: txs.map((tx) {
-                                final isTopup = tx['type'] == 'topup';
-                                final isSuccess = tx['status'] == 'success';
-                                final double amount = double.tryParse(tx['total_amount']?.toString() ?? '0') ?? 0.0;
-                                final timestamp = DateTime.parse(tx['created_at']).toLocal();
+                                final isTopup = tx.isTopup;
+                                final isSuccess = tx.isSuccess;
+                                final double amount = tx.totalAmount;
+                                final timestamp = tx.createdAt?.toLocal() ?? DateTime.now();
                                 final timeStr = DateFormat('dd MMM, HH:mm').format(timestamp);
-                                final canteenName = tx['canteen_operators']?['canteen_name'] ?? 'Top-up';
+                                final canteenName = tx.canteenName ?? 'Top-up';
 
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -504,7 +575,7 @@ class _KeuanganStudentDetailScreenState extends ConsumerState<KeuanganStudentDet
                                           ),
                                           if (!isSuccess)
                                             Text(
-                                              tx['status'].toString().toUpperCase(),
+                                              tx.status.toString().toUpperCase(),
                                               style: GoogleFonts.beVietnamPro(
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.bold,

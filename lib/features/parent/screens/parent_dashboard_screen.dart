@@ -6,32 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final parentDashboardProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, studentId) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  // 1. Fetch profile
-  final profile = await client.from('profiles').select().eq('id', studentId).single();
-  
-  // 2. Fetch student
-  final student = await client.from('students').select().eq('id', studentId).single();
-  
-  // 3. Fetch recent transactions (fetch up to 100 to support rich charts & analytics)
-  final List<dynamic> txs = await client
-      .from('transactions')
-      .select('id, total_amount, type, status, created_at, canteen_operators(canteen_name), transaction_items(quantity, unit_price, products(name, category))')
-      .eq('student_id', studentId)
-      .order('created_at', ascending: false)
-      .limit(100);
-      
-  return {
-    'profile': profile,
-    'student': student,
-    'transactions': List<Map<String, dynamic>>.from(txs),
-  };
-});
+import 'package:kantin_digital/features/parent/providers/parent_providers.dart';
 
 class ParentDashboardScreen extends ConsumerStatefulWidget {
   final String studentId;
@@ -70,15 +48,13 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     super.dispose();
   }
 
-  void _initSettingsIfRequired(Map<String, dynamic> student) {
+  void _initSettingsIfRequired(Student student) {
     if (_settingsLoaded) return;
 
-    final double? dailyLimit = student['daily_limit'] != null 
-        ? double.tryParse(student['daily_limit'].toString()) 
-        : null;
-    final bool isActive = student['is_active'] ?? true;
-    final bool waEnabled = student['wa_notifications_enabled'] ?? true;
-    final String? parentPhone = student['parent_phone']?.toString();
+    final double? dailyLimit = student.dailyLimit;
+    final bool isActive = student.isActive;
+    final bool waEnabled = student.waNotificationsEnabled;
+    final String? parentPhone = student.parentPhone;
 
     _dailyLimitActive = dailyLimit != null && dailyLimit > 0;
     _limitController.text = dailyLimit != null ? dailyLimit.toInt().toString() : '';
@@ -141,24 +117,24 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
   }
 
   // Helper calculation methods
-  double _getTodaySpending(List<Map<String, dynamic>> transactions) {
+  double _getTodaySpending(List<OperatorTransaction> transactions) {
     final now = DateTime.now().toLocal();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     double sum = 0.0;
     for (var tx in transactions) {
-      if (tx['status'] == 'success' && tx['type'] == 'purchase') {
-        final txDateStr = tx['created_at'] != null 
-            ? DateTime.parse(tx['created_at']).toLocal().toIso8601String().substring(0, 10)
+      if (tx.status == 'success' && tx.type == 'purchase') {
+        final txDateStr = tx.createdAt != null 
+            ? tx.createdAt!.toLocal().toIso8601String().substring(0, 10)
             : '';
         if (txDateStr == todayStr) {
-          sum += double.tryParse(tx['total_amount'].toString()) ?? 0.0;
+          sum += tx.totalAmount;
         }
       }
     }
     return sum;
   }
 
-  List<Map<String, dynamic>> _filterTransactionsByPeriod(List<Map<String, dynamic>> transactions, String period) {
+  List<OperatorTransaction> _filterTransactionsByPeriod(List<OperatorTransaction> transactions, String period) {
     final now = DateTime.now().toLocal();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -183,29 +159,27 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     }
 
     return transactions.where((tx) {
-      if (tx['status'] != 'success') return false;
-      final txDate = tx['created_at'] != null 
-          ? DateTime.parse(tx['created_at']).toLocal() 
-          : DateTime.now();
+      if (tx.status != 'success') return false;
+      final txDate = tx.createdAt?.toLocal() ?? DateTime.now();
       return txDate.isAfter(start) && txDate.isBefore(end);
     }).toList();
   }
 
-  Map<String, double> _calculateCategorySpending(List<Map<String, dynamic>> periodTxs) {
+  Map<String, double> _calculateCategorySpending(List<OperatorTransaction> periodTxs) {
     double food = 0.0;
     double drink = 0.0;
     double snack = 0.0;
 
     for (var tx in periodTxs) {
-      if (tx['type'] != 'purchase') continue;
-      final items = tx['transaction_items'] as List<dynamic>? ?? [];
+      if (tx.type != 'purchase') continue;
+      final items = tx.transactionItems ?? [];
       if (items.isEmpty) {
-        food += double.tryParse(tx['total_amount'].toString()) ?? 0.0;
+        food += tx.totalAmount;
       } else {
         for (var item in items) {
-          final qty = item['quantity'] ?? 1;
-          final price = double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0;
-          final category = item['products']?['category']?.toString() ?? 'makanan';
+          final qty = item.quantity;
+          final price = item.unitPrice;
+          final category = item.product?['category']?.toString() ?? 'makanan';
           final amount = qty * price;
           if (category == 'makanan') {
             food += amount;
@@ -222,7 +196,7 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     return {'Makanan': food, 'Minuman': drink, 'Camilan': snack};
   }
 
-  List<double> _calculateWeeklySpending(List<Map<String, dynamic>> transactions) {
+  List<double> _calculateWeeklySpending(List<OperatorTransaction> transactions) {
     final now = DateTime.now().toLocal();
     final today = DateTime(now.year, now.month, now.day);
     int daysToSubtract = today.weekday - 1;
@@ -230,27 +204,25 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
 
     List<double> dailySpending = List.filled(7, 0.0);
     for (var tx in transactions) {
-      if (tx['status'] != 'success' || tx['type'] != 'purchase') continue;
-      final txDate = tx['created_at'] != null 
-          ? DateTime.parse(tx['created_at']).toLocal()
-          : DateTime.now();
+      if (tx.status != 'success' || tx.type != 'purchase') continue;
+      final txDate = tx.createdAt?.toLocal() ?? DateTime.now();
       final difference = txDate.difference(monday).inDays;
       if (difference >= 0 && difference < 7) {
-        dailySpending[difference] += double.tryParse(tx['total_amount'].toString()) ?? 0.0;
+        dailySpending[difference] += tx.totalAmount;
       }
     }
     return dailySpending;
   }
 
-  List<MapEntry<String, int>> _calculateFavoriteItems(List<Map<String, dynamic>> periodTxs) {
+  List<MapEntry<String, int>> _calculateFavoriteItems(List<OperatorTransaction> periodTxs) {
     Map<String, int> frequencies = {};
     for (var tx in periodTxs) {
-      if (tx['type'] != 'purchase') continue;
-      final items = tx['transaction_items'] as List<dynamic>? ?? [];
+      if (tx.type != 'purchase') continue;
+      final items = tx.transactionItems ?? [];
       for (var item in items) {
-        final name = item['products']?['name']?.toString() ?? 'Jajanan';
-        final qty = item['quantity'] ?? 1;
-        frequencies[name] = (frequencies[name] ?? 0) + int.parse(qty.toString());
+        final name = item.productName;
+        final qty = item.quantity;
+        frequencies[name] = (frequencies[name] ?? 0) + qty;
       }
     }
     final sorted = frequencies.entries.toList()
@@ -259,13 +231,13 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
   }
 
   // Tab View Builders
-  Widget _buildHomeTab(String name, String classStr, double balance, double? dailyLimit, List<Map<String, dynamic>> transactions) {
+  Widget _buildHomeTab(String name, String classStr, double balance, double? dailyLimit, List<OperatorTransaction> transactions) {
     final double todaySpending = _getTodaySpending(transactions);
     final now = DateTime.now().toLocal();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final todayTxs = transactions.where((tx) {
-      final txDateStr = tx['created_at'] != null 
-          ? DateTime.parse(tx['created_at']).toLocal().toIso8601String().substring(0, 10)
+      final txDateStr = tx.createdAt != null 
+          ? tx.createdAt!.toLocal().toIso8601String().substring(0, 10)
           : '';
       return txDateStr == todayStr;
     }).toList();
@@ -465,10 +437,10 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
               separatorBuilder: (context, i) => const Divider(height: 1, color: Color(0xFFE4E2E1)),
               itemBuilder: (context, i) {
                 final tx = todayTxs[i];
-                final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                final type = tx['type'] ?? 'purchase';
+                final double amount = tx.totalAmount;
+                final type = tx.type ?? 'purchase';
                 final bool isTopup = type == 'topup';
-                final canteen = tx['canteen_operators']?['canteen_name'] ?? 'Stan Kantin';
+                final canteen = tx.canteenName ?? 'Stan Kantin';
 
                 return ListTile(
                   leading: CircleAvatar(
@@ -501,7 +473,7 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     );
   }
 
-  Widget _buildAnalisisTab(List<Map<String, dynamic>> transactions) {
+  Widget _buildAnalisisTab(List<OperatorTransaction> transactions) {
     const Color primaryTeal = Color(0xFF006767);
     const Color orangeAccent = Color(0xFF904D00);
 
@@ -512,8 +484,8 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
 
     double totalSpending = 0.0;
     for (var tx in periodTxs) {
-      if (tx['type'] == 'purchase') {
-        totalSpending += double.tryParse(tx['total_amount'].toString()) ?? 0.0;
+      if (tx.type == 'purchase') {
+        totalSpending += tx.totalAmount;
       }
     }
 
@@ -764,7 +736,7 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     );
   }
 
-  Widget _buildRiwayatTab(List<Map<String, dynamic>> transactions) {
+  Widget _buildRiwayatTab(List<OperatorTransaction> transactions) {
     const Color primaryTeal = Color(0xFF006767);
     const Color successGreen = Color(0xFF006A35);
     const Color orangeAccent = Color(0xFF904D00);
@@ -774,15 +746,15 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     var filtered = transactions.where((tx) {
       if (query.isEmpty) return true;
       final summary = _getItemsSummary(tx).toLowerCase();
-      final canteen = (tx['canteen_operators']?['canteen_name']?.toString() ?? '').toLowerCase();
+      final canteen = (tx.canteenName ?? '').toLowerCase();
       return summary.contains(query) || canteen.contains(query);
     }).toList();
 
     // Apply type filter
     if (_historyTypeFilter == 'Belanja') {
-      filtered = filtered.where((tx) => tx['type'] == 'purchase').toList();
+      filtered = filtered.where((tx) => tx.type == 'purchase').toList();
     } else if (_historyTypeFilter == 'Top-up') {
-      filtered = filtered.where((tx) => tx['type'] == 'topup').toList();
+      filtered = filtered.where((tx) => tx.type == 'topup').toList();
     }
 
     // Apply date range filter
@@ -790,15 +762,15 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
       final start = DateTime(_historyDateRange!.start.year, _historyDateRange!.start.month, _historyDateRange!.start.day);
       final end = DateTime(_historyDateRange!.end.year, _historyDateRange!.end.month, _historyDateRange!.end.day).add(const Duration(days: 1));
       filtered = filtered.where((tx) {
-        final date = tx['created_at'] != null ? DateTime.parse(tx['created_at']).toLocal() : DateTime.now();
+        final date = tx.createdAt?.toLocal() ?? DateTime.now();
         return date.isAfter(start) && date.isBefore(end);
       }).toList();
     }
 
     // Group by Date for display
-    Map<String, List<Map<String, dynamic>>> grouped = {};
+    Map<String, List<OperatorTransaction>> grouped = {};
     for (var tx in filtered) {
-      final date = tx['created_at'] != null ? DateTime.parse(tx['created_at']).toLocal() : DateTime.now();
+      final date = tx.createdAt?.toLocal() ?? DateTime.now();
       final dateStr = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
       if (grouped[dateStr] == null) {
         grouped[dateStr] = [];
@@ -956,10 +928,10 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
                       separatorBuilder: (context, i) => const Divider(height: 1, color: Color(0xFFE4E2E1)),
                       itemBuilder: (context, i) {
                         final tx = dayTxs[i];
-                        final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                        final type = tx['type'] ?? 'purchase';
+                        final double amount = tx.totalAmount;
+                        final type = tx.type ?? 'purchase';
                         final bool isTopup = type == 'topup';
-                        final canteen = tx['canteen_operators']?['canteen_name'] ?? 'Stan Kantin';
+                        final canteen = tx.canteenName ?? 'Stan Kantin';
 
                         return ListTile(
                           onTap: () => _showReceiptBottomSheet(tx),
@@ -1004,15 +976,15 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     );
   }
 
-  void _showReceiptBottomSheet(Map<String, dynamic> tx) {
+  void _showReceiptBottomSheet(OperatorTransaction tx) {
     const Color primaryTeal = Color(0xFF006767);
     const Color successGreen = Color(0xFF006A35);
-    final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-    final String type = tx['type'] ?? 'purchase';
+    final double amount = tx.totalAmount;
+    final String type = tx.type ?? 'purchase';
     final bool isTopup = type == 'topup';
-    final String canteen = tx['canteen_operators']?['canteen_name'] ?? 'Stan Kantin';
-    final DateTime date = tx['created_at'] != null ? DateTime.parse(tx['created_at']).toLocal() : DateTime.now();
-    final items = tx['transaction_items'] as List<dynamic>? ?? [];
+    final String canteen = tx.canteenName ?? 'Stan Kantin';
+    final DateTime date = tx.createdAt?.toLocal() ?? DateTime.now();
+    final items = tx.transactionItems ?? [];
 
     showModalBottomSheet(
       context: context,
@@ -1049,7 +1021,7 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
                 const SizedBox(height: 24),
 
                 // Transaction parameters
-                _buildSheetReceiptRow('ID Transaksi', tx['id']?.toString().substring(0, 18).toUpperCase() ?? '-'),
+                _buildSheetReceiptRow('ID Transaksi', tx.id.substring(0, 18).toUpperCase()),
                 const SizedBox(height: 12),
                 _buildSheetReceiptRow('Waktu Transaksi', '${DateFormat('dd MMM yyyy, HH:mm').format(date)} WIB'),
                 const SizedBox(height: 12),
@@ -1068,13 +1040,13 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
                     separatorBuilder: (context, i) => const SizedBox(height: 6),
                     itemBuilder: (context, i) {
                       final item = items[i];
-                      final qty = item['quantity'] ?? 1;
-                      final price = double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0;
-                      final name = item['products']?['name'] ?? 'Jajanan';
+                      final qty = item.quantity;
+                      final price = item.unitPrice;
+                      final name = item.productName;
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('$qty\'x $name', style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
+                          Text('${qty}x $name', style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
                           Text(CurrencyFormatter.format(qty * price), style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w500)),
                         ],
                       );
@@ -1133,17 +1105,17 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
     );
   }
 
-  String _getItemsSummary(Map<String, dynamic> tx) {
-    if (tx['type'] == 'topup') {
+  String _getItemsSummary(OperatorTransaction tx) {
+    if (tx.type == 'topup') {
       return 'Top-up saldo digital';
     }
-    final items = tx['transaction_items'] as List<dynamic>? ?? [];
+    final items = tx.transactionItems ?? [];
     if (items.isEmpty) {
       return 'Pembelian jajanan';
     }
     return items.map((item) {
-      final qty = item['quantity'] ?? 1;
-      final name = item['products']?['name'] ?? 'Jajanan';
+      final qty = item.quantity;
+      final name = item.productName;
       return "${qty}x $name";
     }).join(', ');
   }
@@ -1424,16 +1396,14 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
           Expanded(
             child: dataAsync.when(
               data: (data) {
-                final profile = data['profile'] as Map<String, dynamic>;
-                final student = data['student'] as Map<String, dynamic>;
-                final txs = data['transactions'] as List<Map<String, dynamic>>;
+                final profile = data.profile;
+                final student = data.student;
+                final txs = data.transactions;
 
-                final String name = profile['full_name'] ?? 'Siswa';
-                final String classStr = student['class'] ?? 'Kelas';
-                final double balance = double.tryParse(student['balance'].toString()) ?? 0.0;
-                final double? dailyLimit = student['daily_limit'] != null 
-                    ? double.tryParse(student['daily_limit'].toString()) 
-                    : null;
+                final String name = profile.fullName ?? 'Siswa';
+                final String classStr = student.class_ ?? 'Kelas';
+                final double balance = student.balance;
+                final double? dailyLimit = student.dailyLimit;
 
                 // Bind settings to local state once
                 _initSettingsIfRequired(student);

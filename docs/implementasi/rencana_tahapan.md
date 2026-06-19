@@ -1,55 +1,175 @@
-# Rencana Tahapan Implementasi & Desain UI/UX
+# Rencana Tahapan Implementasi & Arsitektur UI/UX
 
-Dokumen ini berisi cetak biru arsitektur, sitemap, panduan visual, dan tahapan implementasi untuk proyek **Kantin Digital POS (Mobile App)** agar dapat dibaca, dipahami, dan dilanjutkan oleh agen AI lain atau pengembang.
+Dokumen ini berisi cetak biru arsitektur, sitemap, panduan visual, dan tahapan implementasi untuk proyek **Kantin Digital** (multi-platform) agar dapat dibaca, dipahami, dan dilanjutkan oleh agen AI lain atau pengembang.
+
+**Terakhir diperbarui**: 18 Juni 2026
 
 ---
 
 ## 🎨 1. Panduan Desain Visual (Design System)
+
 Aplikasi ini dirancang dengan gaya **Minimalis Modern** yang berkiblat pada **iOS Layout (Cupertino-style)** dengan bahasa copywriting yang **sangat familiar bagi orang Indonesia (Indonesian Friendly)**.
 
-*   **Tipografi**: `SF Pro Text` / `Inter` (Font sans-serif khas iOS yang bersih dan membulat).
+*   **Tipografi**: Google Fonts `Be Vietnam Pro` — font sans-serif modern yang bersih.
 *   **Warna Utama**:
-    *   *Primary Teal* (`#0E8A8A`): Bersih dan profesional.
-    *   *System Background* (`#F2F2F7`): Abu-abu sangat muda khas iOS.
+    *   *Primary Teal* (`#003434`): Gelap, profesional, digunakan sebagai warna brand utama.
+    *   *Surface Background* (`#FBF9F8`): Off-white hangat.
     *   *Card Background* (`#FFFFFF`): Putih bersih untuk kontainer data.
-    *   *Accent Orange* (`#FF9500`): iOS Orange untuk penanda top-up/keranjang.
-    *   *System Red* (`#FF3B30`): iOS Red untuk pembatalan/error/keluar akun.
+    *   *Success Green* (`#006A35`): Status aktif/berhasil.
+    *   *Danger Red* (`#BA1A1A`): Error/blokir/saldo rendah.
+    *   *Muted Text* (`#6F7978`): Teks sekunder.
 *   **Karakteristik iOS**:
-    *   *Flat Minimalist Elements*: Tanpa bayangan tebal (elevation 0). Menggunakan garis tepi tipis (`border: 0.5px solid #E5E5EA`) dengan radius melengkung (`borderRadius: 12` hingga `16`).
+    *   *Flat Minimalist Elements*: Bayangan halus (`blurRadius: 15, alpha: 0.04`), radius melengkung (`borderRadius: 12` hingga `24`).
     *   *iOS Grab Handle* (`───`): Strip pemandu di bagian atas untuk bottom sheet modal.
-    *   *Cupertino Segmented Control*: Tab filter kategori berbentuk pil horizontal menyatu.
-    *   *Cupertino Switch*: Toggle oval membulat untuk stok/freeze kartu.
+    *   *Cupertino Segmented Control*: Tab filter berbentuk pil horizontal.
+    *   *Cupertino Switch*: Toggle oval membulat untuk status aktif/nonaktif.
+    *   *CupertinoActivityIndicator*: Loading indicator khas iOS.
 *   **Istilah Lokal (Copywriting)**:
-    *   "Isi Saldo", "Bekukan Kartu", "Riwayat Jajan", "Tambah Biaya Ekstra (Nasi/Sambal)", "Tap Kartu Siswa", "Cek Kartu", "Batal Transaksi / Refund".
+    *   "Isi Saldo", "Bekukan Kartu", "Riwayat Jajan", "Koreksi Saldo", "Tap Kartu Siswa", "Cek Kartu", "Kartu Terhubung", "Belum Ada Kartu", "Saldo Rendah".
 
 ---
 
-## 🗺️ 2. Struktur Alur Layar (Sitemap)
+## 🏗️ 2. Arsitektur Teknis
 
+### Tech Stack
+*   **Frontend**: Flutter (Dart) — single codebase untuk Android & iOS
+*   **Backend**: Supabase (PostgreSQL + Auth + Storage + Realtime)
+*   **State Management**: Riverpod (StateNotifier, FutureProvider, Family providers)
+*   **Routing**: GoRouter (ShellRoute untuk bottom nav, GoRoute untuk sub-pages)
+*   **Database**: PostgreSQL dengan Row Level Security (RLS)
+*   **Authentication**: Supabase Auth (JWT session) + fallback profiles-based auth
+
+### Layer Arsitektur
 ```
-[Login Screen / Masuk] ──> [POS Cashier Dashboard (Kasir)] ──> [Detail Keranjang] ──> [NFC Payment Modal]
-                           ├── [Layar Cek Kartu Siswa] (Akses via Bottom Nav "Cek Kartu")
-                           ├── [Katalog Menu CRUD] ──> [Form Tambah / Edit Produk]
-                           └── [Riwayat Penjualan Stan] ──> [Refund Transaction]
+┌─────────────────────────────────────────────┐
+│                  UI Layer                    │
+│  (Screens, Widgets, MainLayouts)            │
+├─────────────────────────────────────────────┤
+│              Provider Layer                  │
+│  (Riverpod providers, StateNotifiers)        │
+│  core/providers/ + features/*/providers/     │
+├─────────────────────────────────────────────┤
+│              Model Layer                     │
+│  (Typed data classes: fromJson/toJson)       │
+│  core/models/                                │
+├─────────────────────────────────────────────┤
+│             Service Layer                    │
+│  (AuthService, SupabaseClient)               │
+│  core/services/ + features/*/services/       │
+├─────────────────────────────────────────────┤
+│              Data Layer                      │
+│  (Supabase PostgreSQL + RLS + RPC)           │
+│  supabase/migrations/                        │
+└─────────────────────────────────────────────┘
+```
+
+### Pola Navigasi (GoRouter)
+Setiap modul (siswa, kantin, keuangan, admin) menggunakan **ShellRoute** untuk bottom navigation dan **GoRoute** terpisah untuk sub-pages:
+```
+ShellRoute(MainLayout)
+  ├── /module/home        → DashboardScreen
+  ├── /module/tab2        → Tab2Screen
+  └── /module/tab3        → Tab3Screen
+
+GoRoute (outside shell)
+  ├── /module/detail/:id  → DetailScreen
+  └── /module/form        → FormScreen
 ```
 
 ---
 
-## 🚀 3. Tahapan Pengembangan (Phases)
+## 🗺️ 3. Struktur Alur Layar (Sitemap)
 
-*   **Phase 1: Database Setup & Supabase Migrations** (Telah Selesai)
-    *   Menyiapkan migrasi SQL awal, tabel-tabel utama, trigger otomatis, Row Level Security (RLS) policies, dan Stored Procedure transaksional (RPC).
-*   **Phase 2: Core Setup & Visual Branding** (Telah Selesai)
-    *   Inisialisasi dependensi Flutter (`supabase_flutter`, `go_router`, `flutter_riverpod`, `nfc_manager`, `google_fonts`), setup token warna, lokalisasi teks, tema dasar Material (Scaffold/AppBar flat), dan rute navigasi GoRouter.
-*   **Phase 3: Aktor Autentikasi (Screen 1)** (Belum Selesai)
-    *   Pengerjaan folder `features/auth/`, pembuatan halaman login kasir, dan integrasi session check Supabase Auth.
-*   **Phase 4: POS Dashboard & Detail Keranjang (Screen 2 & 3)** (Belum Selesai)
-    *   Pembuatan katalog POS grid, logic State Management keranjang belanja, halaman detail keranjang, dan dialog kustom biaya tambahan manual.
-*   **Phase 5: Integrasi NFC & Transaksi Pembayaran (Screen 4)** (Belum Selesai)
-    *   Integrasi plugin `nfc_manager` untuk membaca UID kartu, pemanggilan RPC `process_purchase` Supabase, getaran haptic sukses, dan modal status transaksi.
-*   **Phase 6: Cek Kartu Siswa (Screen 5)** (Belum Selesai)
-    *   Layar scan NFC mandiri dan layar hasil cek saldo/status kartu (Nama, Kelas, Status Aktif badge, Saldo besar teal) sesuai mockup visual.
-*   **Phase 7: Kelola Jajanan CRUD (Screen 6 & 7)** (Belum Selesai)
-    *   Manajemen menu stan (ketersediaan stok via Cupertino Switch), edit harga, dan form input jajanan baru (borderless input iOS).
-*   **Phase 8: Rekap Penjualan & Refund (Screen 8)** (Belum Selesai)
-    *   Rekap harian stan, daftar aktivitas penjualan, tombol refund (aktif < 10 menit), dan proses transaksi rollback saldo.
+### Modul Siswa
+```
+[Login/Splash] → [Welcome] → [Dashboard (Beranda)]
+                              ├── [Isi Saldo]
+                              ├── [Riwayat Jajan]
+                              ├── [Kartu RFID]
+                              ├── [Profil]
+                              └── [Notifikasi]
+```
+
+### Modul Kantin/POS
+```
+[Login] → [POS Home (Beranda)]
+           ├── [Terminal POS] → [Keranjang] → [NFC Payment]
+           ├── [Cek Kartu Siswa]
+           ├── [Kelola Menu] → [Form Tambah/Edit]
+           └── [Riwayat Penjualan] → [Refund]
+```
+
+### Modul Admin Keuangan
+```
+[Login] → [Keuangan Settings (paling kiri)]
+          [Keuangan Home (Beranda)]
+          ├── [Manajemen Siswa] → [Detail Siswa] → [Registrasi Kartu]
+          ├── [Isi Saldo] (dengan prefilled student)
+          ├── [Koreksi Saldo] (dengan prefilled student)
+          ├── [Riwayat Transaksi]
+          ├── [Laporan & Grafik]
+          ├── [Manajemen User]
+          └── [Profil]
+```
+
+### Modul Orang Tua
+```
+[Portal (Login NISN)] → [Dashboard Anak]
+                        ├── [Isi Saldo]
+                        └── [Struk Transaksi]
+```
+
+### Modul Super Admin
+```
+[Secure Entry (PIN)] → [Dashboard]
+                       ├── [Manajemen Users] → [Detail Student/Merchant/Finance/Parent]
+                       ├── [Audit Log]
+                       └── [Settings]
+```
+
+---
+
+## 🚀 4. Tahapan Pengembangan (Phases)
+
+| Phase | Nama | Status |
+|---|---|---|
+| 1 | Database Setup & Supabase Migrations | ✅ Selesai |
+| 2 | Core Setup & Visual Branding | ✅ Selesai |
+| 3 | Autentikasi (Semua Role) | ✅ Selesai |
+| 4 | Modul Siswa (Mobile) | ✅ Selesai |
+| 5 | Modul Kantin/POS (Mobile) | ✅ Selesai |
+| 6 | Modul Admin Keuangan (Mobile) | ✅ Selesai |
+| 7 | Modul Orang Tua (Web/Mobile) | ✅ Selesai |
+| 8 | Modul Super Admin (Mobile) | ✅ Selesai |
+| 9 | Code Architecture (Models & Providers) | 🔄 Sedang Berjalan |
+| 10 | Security Hardening & Production | ⏳ Belum Mulai |
+
+### Detail Phase 9 (Sedang Berjalan): Code Architecture
+*   ✅ 7 typed data models (`core/models/`)
+*   ✅ Core providers (`app_providers.dart` + `shared_providers.dart`)
+*   ✅ Keuangan providers (`keuangan_providers.dart`)
+*   ⏳ Migrasi screens ke typed models
+*   ⏳ Kantin/Siswa/Admin/Parent providers
+*   ⏳ Repository/service layer
+
+### Detail Phase 10 (Belum Mulai): Security & Production
+*   ⚠️ Mengaktifkan kembali RLS
+*   ⚠️ Password hashing (bcrypt/argon2)
+*   ⏳ Input validation & sanitization
+*   ⏳ Error boundary & crash reporting
+*   ⏳ Environment configuration (dev/staging/prod)
+
+---
+
+## 📦 5. Dependensi Utama (pubspec.yaml)
+
+| Package | Fungsi |
+|---|---|
+| `supabase_flutter` | Backend (Auth, Database, Storage, Realtime) |
+| `flutter_riverpod` | State management |
+| `go_router` | Declarative routing & navigation |
+| `google_fonts` | Typography (Be Vietnam Pro) |
+| `intl` | Formatting (currency, date) |
+| `connectivity_plus` | Network monitoring |
+| `fl_chart` | Charts & graphs (laporan) |
+| `nfc_manager` | NFC/RFID scanning (POS) |

@@ -13,12 +13,16 @@ class KeuanganMainLayout extends ConsumerWidget {
 
   int _getSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/finance/students')) {
+    if (location.startsWith('/finance/settings')) {
+      return 5;
+    } else if (location.startsWith('/finance/students')) {
       return 1;
-    } else if (location.startsWith('/finance/history')) {
+    } else if (location.startsWith('/finance/users')) {
       return 2;
-    } else if (location.startsWith('/finance/report')) {
+    } else if (location.startsWith('/finance/history')) {
       return 3;
+    } else if (location.startsWith('/finance/report')) {
+      return 4;
     }
     return 0; // default to /finance (dashboard)
   }
@@ -32,10 +36,16 @@ class KeuanganMainLayout extends ConsumerWidget {
         context.go('/finance/students');
         break;
       case 2:
-        context.go('/finance/history');
+        context.go('/finance/users');
         break;
       case 3:
+        context.go('/finance/history');
+        break;
+      case 4:
         context.go('/finance/report');
+        break;
+      case 5:
+        context.go('/finance/settings');
         break;
     }
   }
@@ -92,14 +102,24 @@ class KeuanganMainLayout extends ConsumerWidget {
               label: 'Siswa',
             ),
             BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.group, size: 22),
+              activeIcon: Icon(CupertinoIcons.group_solid, size: 22),
+              label: 'Pengguna',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.list_bullet, size: 22),
-              activeIcon: Icon(CupertinoIcons.list_bullet, size: 22), // No fill equivalent in standard cupertino
+              activeIcon: Icon(CupertinoIcons.list_bullet, size: 22),
               label: 'Transaksi',
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.chart_bar, size: 22),
               activeIcon: Icon(CupertinoIcons.chart_bar_fill, size: 22),
               label: 'Laporan',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.gear, size: 22),
+              activeIcon: Icon(CupertinoIcons.gear_solid, size: 22),
+              label: 'Settings',
             ),
           ],
         ),
@@ -191,11 +211,20 @@ class KeuanganMainLayout extends ConsumerWidget {
                 const SizedBox(height: 8),
                 _buildSidebarItem(
                   context: context,
+                  icon: CupertinoIcons.group,
+                  activeIcon: CupertinoIcons.group_solid,
+                  label: 'Pengguna',
+                  isSelected: selectedIndex == 2,
+                  onTap: () => _onItemTapped(2, context),
+                ),
+                const SizedBox(height: 8),
+                _buildSidebarItem(
+                  context: context,
                   icon: CupertinoIcons.list_bullet,
                   activeIcon: CupertinoIcons.list_bullet,
                   label: 'Transaksi',
-                  isSelected: selectedIndex == 2,
-                  onTap: () => _onItemTapped(2, context),
+                  isSelected: selectedIndex == 3,
+                  onTap: () => _onItemTapped(3, context),
                 ),
                 const SizedBox(height: 8),
                 _buildSidebarItem(
@@ -203,17 +232,17 @@ class KeuanganMainLayout extends ConsumerWidget {
                   icon: CupertinoIcons.chart_bar,
                   activeIcon: CupertinoIcons.chart_bar_fill,
                   label: 'Laporan',
-                  isSelected: selectedIndex == 3,
-                  onTap: () => _onItemTapped(3, context),
+                  isSelected: selectedIndex == 4,
+                  onTap: () => _onItemTapped(4, context),
                 ),
                 const SizedBox(height: 8),
                 _buildSidebarItem(
                   context: context,
-                  icon: CupertinoIcons.person,
-                  activeIcon: CupertinoIcons.person_fill,
-                  label: 'Profil Saya',
-                  isSelected: false, // Redirects to separate page
-                  onTap: () => context.push('/finance/profile'),
+                  icon: CupertinoIcons.gear,
+                  activeIcon: CupertinoIcons.gear_solid,
+                  label: 'Settings',
+                  isSelected: selectedIndex == 5,
+                  onTap: () => _onItemTapped(5, context),
                 ),
               ],
             ),

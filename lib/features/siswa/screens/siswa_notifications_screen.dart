@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
 import 'package:kantin_digital/features/siswa/providers/siswa_providers.dart';
 
@@ -100,7 +101,7 @@ class SiswaNotificationsScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: notificationsAsync.when(
-              data: (List<Map<String, dynamic>> notifs) {
+              data: (List<AppNotification> notifs) {
                 if (notifs.isEmpty) {
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -134,15 +135,13 @@ class SiswaNotificationsScreen extends ConsumerWidget {
                   itemCount: notifs.length,
                   itemBuilder: (context, index) {
                     final notif = notifs[index];
-                    final String id = notif['id']?.toString() ?? '';
-                    final String title = notif['title']?.toString() ?? 'Pemberitahuan';
-                    final String message = notif['message']?.toString() ?? '';
-                    final String type = notif['type']?.toString() ?? 'system';
-                    final bool isRead = notif['is_read'] ?? false;
+                    final String id = notif.id;
+                    final String title = notif.title;
+                    final String message = notif.message;
+                    final String type = notif.type;
+                    final bool isRead = notif.isRead;
                     
-                    final DateTime createdAt = notif['created_at'] != null 
-                        ? DateTime.parse(notif['created_at']).toLocal()
-                        : DateTime.now();
+                    final DateTime createdAt = notif.createdAt?.toLocal() ?? DateTime.now();
                     final String timeStr = DateFormat('dd MMM, HH:mm').format(createdAt);
 
                     IconData iconData;

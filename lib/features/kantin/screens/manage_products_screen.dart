@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
 import 'package:kantin_digital/core/constants/app_strings.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
 import 'package:kantin_digital/features/kantin/providers/pos_providers.dart';
@@ -161,7 +162,7 @@ class ManageProductsScreen extends ConsumerWidget {
 
                 // Products list
                 productsAsync.when(
-                  data: (List<Map<String, dynamic>> products) {
+                  data: (List<Product> products) {
                     if (products.isEmpty) {
                       return SliverFillRemaining(
                         hasScrollBody: false,
@@ -196,12 +197,12 @@ class ManageProductsScreen extends ConsumerWidget {
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
                             final product = products[index];
-                            final String id = product['id']?.toString() ?? '';
-                            final String name = product['name']?.toString() ?? 'Jajanan';
-                            final String category = product['category']?.toString() ?? 'makanan';
-                            final double price = double.tryParse(product['price'].toString()) ?? 0.0;
-                            final bool isAvailable = product['is_available'] ?? true;
-                            final String? imageUrl = product['image_url']?.toString();
+                            final String id = product.id;
+                            final String name = product.name;
+                            final String category = product.category;
+                            final double price = product.price;
+                            final bool isAvailable = product.isAvailable;
+                            final String? imageUrl = product.imageUrl;
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),

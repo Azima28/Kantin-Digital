@@ -180,7 +180,7 @@ class SiswaProfileScreen extends ConsumerWidget {
       ),
       body: studentAsync.when(
         data: (student) {
-          final String studentClass = student?['class'] ?? '8-B';
+          final String studentClass = student?.class_ ?? '8-B';
 
           return Align(
             alignment: Alignment.topCenter,
