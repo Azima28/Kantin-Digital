@@ -69,7 +69,7 @@ ON CONFLICT (id) DO UPDATE SET
 INSERT INTO public.students (id, class, balance, is_active)
 VALUES (
     '03525ad9-d9e3-4f55-8ee6-7ff5b06d2025'::uuid,
-    '10A',
+    '8-B',
     50000.00,
     true
 )

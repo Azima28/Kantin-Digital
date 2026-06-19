@@ -11,7 +11,7 @@ class KantinMainLayout extends ConsumerWidget {
 
   int _getSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/pos/check-card')) {
+    if (location.startsWith('/pos/orders')) {
       return 1;
     } else if (location.startsWith('/pos/products')) {
       return 2;
@@ -27,7 +27,7 @@ class KantinMainLayout extends ConsumerWidget {
         context.go('/pos');
         break;
       case 1:
-        context.go('/pos/check-card');
+        context.go('/pos/orders');
         break;
       case 2:
         context.go('/pos/products');
@@ -88,45 +88,116 @@ class KantinMainLayout extends ConsumerWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: Container(
+        height: 64 + MediaQuery.of(context).padding.bottom,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + 8,
+          top: 8,
+          left: 12,
+          right: 12,
+        ),
         decoration: const BoxDecoration(
+          color: Colors.white,
           border: Border(
             top: BorderSide(color: AppColors.borderLight, width: 0.5),
           ),
         ),
-        child: BottomNavigationBar(
-          currentIndex: selectedIndex,
-          onTap: (int index) => _onItemTapped(index, context),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.cardBackground,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textGray,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-          elevation: 0,
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.home, size: 22),
-              activeIcon: Icon(CupertinoIcons.house_fill, size: 22),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildBottomNavItem(
+              index: 0,
+              selectedIndex: selectedIndex,
+              icon: CupertinoIcons.home,
+              activeIcon: CupertinoIcons.house_fill,
               label: 'Beranda',
+              onTap: () => _onItemTapped(0, context),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.creditcard, size: 22),
-              activeIcon: Icon(CupertinoIcons.creditcard_fill, size: 22),
-              label: 'Cek Kartu',
+            _buildBottomNavItem(
+              index: 1,
+              selectedIndex: selectedIndex,
+              icon: CupertinoIcons.cart,
+              activeIcon: CupertinoIcons.cart_fill,
+              label: 'Pesanan',
+              onTap: () => _onItemTapped(1, context),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.tray_full, size: 22),
-              activeIcon: Icon(CupertinoIcons.tray_full_fill, size: 22),
+            _buildBottomNavItem(
+              index: 2,
+              selectedIndex: selectedIndex,
+              icon: Icons.restaurant,
+              activeIcon: Icons.restaurant,
               label: 'Menu',
+              onTap: () => _onItemTapped(2, context),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.time, size: 22),
-              activeIcon: Icon(CupertinoIcons.time_solid, size: 22),
+            _buildBottomNavItem(
+              index: 3,
+              selectedIndex: selectedIndex,
+              icon: Icons.history,
+              activeIcon: Icons.history,
               label: 'Riwayat',
+              onTap: () => _onItemTapped(3, context),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBottomNavItem({
+    required int index,
+    required int selectedIndex,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final bool isSelected = index == selectedIndex;
+    final Color activeColor = const Color(0xFF006767);
+    final Color inactiveColor = const Color(0xFF7A7A7A);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: isSelected
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD6F0F0),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(activeIcon, color: activeColor, size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: activeColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: inactiveColor, size: 22),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: inactiveColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -205,9 +276,9 @@ class KantinMainLayout extends ConsumerWidget {
                 const SizedBox(height: 8),
                 _buildSidebarItem(
                   context: context,
-                  icon: CupertinoIcons.creditcard,
-                  activeIcon: CupertinoIcons.creditcard_fill,
-                  label: 'Cek Kartu',
+                  icon: CupertinoIcons.cart,
+                  activeIcon: CupertinoIcons.cart_fill,
+                  label: 'Daftar Pesanan',
                   isSelected: selectedIndex == 1,
                   onTap: () => _onItemTapped(1, context),
                 ),

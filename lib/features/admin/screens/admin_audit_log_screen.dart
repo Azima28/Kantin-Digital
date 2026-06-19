@@ -42,13 +42,19 @@ class AdminAuditLogScreen extends ConsumerStatefulWidget {
   const AdminAuditLogScreen({super.key});
 
   @override
-  ConsumerState<AdminAuditLogScreen> createState() => _AdminAuditLogScreenState();
+  ConsumerState<AdminAuditLogScreen> createState() =>
+      _AdminAuditLogScreenState();
 }
 
 class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
   String _selectedAction = 'All Actions';
 
-  final List<String> _actions = ['All Actions', 'Balance Correction', 'Card Registration', 'System Settings'];
+  final List<String> _actions = [
+    'All Actions',
+    'Balance Correction',
+    'Card Registration',
+    'System Settings',
+  ];
 
   String _mapActionTypeToFilter(String filter) {
     switch (filter) {
@@ -112,9 +118,15 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
 
                   // Metadata cards
                   _buildMetadataRow('Pelaksana', log.actorName),
-                  _buildMetadataRow('Tanggal & Waktu', DateFormat('dd MMM yyyy, HH:mm:ss').format(date)),
+                  _buildMetadataRow(
+                    'Tanggal & Waktu',
+                    DateFormat('dd MMM yyyy, HH:mm:ss').format(date),
+                  ),
                   _buildMetadataRow('IP Address', log.ipAddress ?? '127.0.0.1'),
-                  _buildMetadataRow('User Agent', log.userAgent ?? 'Unknown Client'),
+                  _buildMetadataRow(
+                    'User Agent',
+                    log.userAgent ?? 'Unknown Client',
+                  ),
                   const SizedBox(height: 24),
 
                   // JSON Diff Header
@@ -266,7 +278,10 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         children: [
           // Subtitle & Dropdowns
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 8.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -278,7 +293,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Action Filter
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -290,7 +305,11 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                     child: DropdownButton<String>(
                       value: _selectedAction,
                       isExpanded: true,
-                      icon: const Icon(CupertinoIcons.chevron_down, size: 16, color: primaryTeal),
+                      icon: const Icon(
+                        CupertinoIcons.chevron_down,
+                        size: 16,
+                        color: primaryTeal,
+                      ),
                       style: GoogleFonts.beVietnamPro(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -323,7 +342,9 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
 
                 if (_selectedAction != 'All Actions') {
                   final dbActionKey = _mapActionTypeToFilter(_selectedAction);
-                  filtered = filtered.where((l) => l.actionType == dbActionKey).toList();
+                  filtered = filtered
+                      .where((l) => l.actionType == dbActionKey)
+                      .toList();
                 }
 
                 if (filtered.isEmpty) {
@@ -344,7 +365,10 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                   },
                   color: primaryTeal,
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final log = filtered[index];
@@ -368,7 +392,8 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                       IconData actionIcon = CupertinoIcons.settings;
                       if (actionType == 'KOREKSI_SALDO') {
                         actionColor = const Color(0xFFBA1A1A);
-                        actionIcon = CupertinoIcons.exclamationmark_triangle_fill;
+                        actionIcon =
+                            CupertinoIcons.exclamationmark_triangle_fill;
                       } else if (actionType == 'REGISTRASI_KARTU') {
                         actionColor = const Color(0xFF003718);
                         actionIcon = CupertinoIcons.creditcard_fill;
@@ -394,8 +419,14 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                             // Icon Badge
                             CircleAvatar(
                               radius: 18,
-                              backgroundColor: actionColor.withValues(alpha: 0.1),
-                              child: Icon(actionIcon, color: actionColor, size: 18),
+                              backgroundColor: actionColor.withValues(
+                                alpha: 0.1,
+                              ),
+                              child: Icon(
+                                actionIcon,
+                                color: actionColor,
+                                size: 18,
+                              ),
                             ),
                             const SizedBox(width: 12),
 
@@ -405,14 +436,22 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Flexible(
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: actionColor.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(99),
+                                            color: actionColor.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              99,
+                                            ),
                                           ),
                                           child: Text(
                                             actionType.replaceAll('_', ' '),
@@ -484,7 +523,9 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                   ),
                 );
               },
-              loading: () => const Center(child: CupertinoActivityIndicator(color: primaryTeal)),
+              loading: () => const Center(
+                child: CupertinoActivityIndicator(color: primaryTeal),
+              ),
               error: (err, stack) => Center(child: Text('Error: $err')),
             ),
           ),

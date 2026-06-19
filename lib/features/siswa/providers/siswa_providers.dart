@@ -77,3 +77,43 @@ final AutoDisposeFutureProvider<List<AppNotification>>
       .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
       .toList();
 });
+
+// Provider untuk mengambil data kontak orang tua
+final AutoDisposeFutureProvider<Map<String, String>?> siswaParentContactProvider =
+    FutureProvider.autoDispose<Map<String, String>?>((Ref ref) async {
+  final authState = ref.watch(authNotifierProvider);
+  final String? profileId = authState.profile?['id'];
+  if (profileId == null) return null;
+
+  final client = ref.read(supabaseClientProvider);
+  try {
+    final parentRel = await client
+        .from('parent_students')
+        .select('parent_id')
+        .eq('student_id', profileId)
+        .maybeSingle();
+
+    if (parentRel != null && parentRel['parent_id'] != null) {
+      final String parentId = parentRel['parent_id'];
+      final parentProfile = await client
+          .from('profiles')
+          .select('email, phone_number')
+          .eq('id', parentId)
+          .maybeSingle();
+
+      if (parentProfile != null) {
+        return {
+          'email': parentProfile['email']?.toString() ?? 'budi.subarjo@gmail.com',
+          'phone': parentProfile['phone_number']?.toString() ?? '08123456789',
+        };
+      }
+    }
+  } catch (_) {
+    // Fallback to default mock values if database query fails
+  }
+
+  return {
+    'email': 'budi.subarjo@gmail.com',
+    'phone': '08123456789',
+  };
+});

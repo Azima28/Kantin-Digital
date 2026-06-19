@@ -30,6 +30,7 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -39,161 +40,168 @@ class _SiswaHistoryScreenState extends ConsumerState<SiswaHistoryScreen> {
           builder: (context, ref, child) {
             final itemsAsync = ref.watch(transactionDetailsProvider(txId));
 
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      'Detail Transaksi',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Success Banner Indicator
-                  Center(
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: type == 'topup' ? AppColors.primary.withAlpha(20) : AppColors.success.withAlpha(20),
-                          ),
-                          child: Icon(
-                            type == 'topup' ? CupertinoIcons.square_arrow_down : CupertinoIcons.check_mark_circled,
-                            color: type == 'topup' ? AppColors.primary : AppColors.success,
-                            size: 36,
-                          ),
+            return SingleChildScrollView(
+              child: Container(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 16,
+                  bottom: MediaQuery.of(context).padding.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(999),
                         ),
-                        const SizedBox(height: 8),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Text(
+                        'Detail Transaksi',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Success Banner Indicator
+                    Center(
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: type == 'topup' ? AppColors.primary.withAlpha(20) : AppColors.success.withAlpha(20),
+                            ),
+                            child: Icon(
+                              type == 'topup' ? CupertinoIcons.square_arrow_down : CupertinoIcons.check_mark_circled,
+                              color: type == 'topup' ? AppColors.primary : AppColors.success,
+                              size: 36,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            type == 'topup' ? 'Top-Up Saldo Sukses' : 'Pembayaran Sukses',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('ID Transaksi', style: TextStyle(color: AppColors.textGray, fontSize: 13)),
+                        Text(txId.substring(0, 10).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Waktu', style: TextStyle(color: AppColors.textGray, fontSize: 13)),
+                        Text(timeStr, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Metode/Lokasi', style: TextStyle(color: AppColors.textGray, fontSize: 13)),
+                        Text(type == 'topup' ? 'QRIS / Koperasi' : canteenName, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                      ],
+                    ),
+                    
+                    if (type == 'purchase') ...[
+                      const Divider(height: 20),
+                      const Text('Rincian Pembelian:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark)),
+                      const SizedBox(height: 8),
+                      itemsAsync.when(
+                        data: (items) {
+                          return Container(
+                            constraints: const BoxConstraints(maxHeight: 120),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: items.length,
+                              itemBuilder: (context, i) {
+                                final item = items[i];
+                                final String name = item.productName;
+                                final double itemPrice = item.unitPrice;
+                                final int qty = item.quantity;
+
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('$qty x  $name', style: const TextStyle(fontSize: 13, color: AppColors.textDark)),
+                                      Text(CurrencyFormatter.format(itemPrice * qty), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        loading: () => const Center(child: CupertinoActivityIndicator()),
+                        error: (err, stack) => Text('Gagal memuat detail barang: $err', style: const TextStyle(color: AppColors.error, fontSize: 11)),
+                      ),
+                    ],
+
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(type == 'topup' ? 'Total Masuk Saldo:' : 'Total Potong Saldo:', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                         Text(
-                          type == 'topup' ? 'Top-Up Saldo Sukses' : 'Pembayaran Sukses',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          CurrencyFormatter.format(amount),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: type == 'topup' ? AppColors.primary : AppColors.textDark,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('ID Transaksi', style: TextStyle(color: AppColors.textGray, fontSize: 13)),
-                      Text(txId.substring(0, 10).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                    ],
-                  ),
-                  const Divider(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Waktu', style: TextStyle(color: AppColors.textGray, fontSize: 13)),
-                      Text(timeStr, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                    ],
-                  ),
-                  const Divider(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Metode/Lokasi', style: TextStyle(color: AppColors.textGray, fontSize: 13)),
-                      Text(type == 'topup' ? 'QRIS / Koperasi' : canteenName, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                    ],
-                  ),
-                  
-                  if (type == 'purchase') ...[
-                    const Divider(height: 20),
-                    const Text('Rincian Pembelian:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark)),
-                    const SizedBox(height: 8),
-                    itemsAsync.when(
-                      data: (items) {
-                        return Container(
-                          constraints: const BoxConstraints(maxHeight: 120),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: items.length,
-                            itemBuilder: (context, i) {
-                              final item = items[i];
-                              final String name = item.productName;
-                              final double itemPrice = item.unitPrice;
-                              final int qty = item.quantity;
-
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('$qty x  $name', style: const TextStyle(fontSize: 13, color: AppColors.textDark)),
-                                    Text(CurrencyFormatter.format(itemPrice * qty), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      loading: () => const Center(child: CupertinoActivityIndicator()),
-                      error: (err, stack) => Text('Gagal memuat detail barang: $err', style: const TextStyle(color: AppColors.error, fontSize: 11)),
-                    ),
-                  ],
-
-                  const Divider(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(type == 'topup' ? 'Total Masuk Saldo:' : 'Total Potong Saldo:', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                      Text(
-                        CurrencyFormatter.format(amount),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: type == 'topup' ? AppColors.primary : AppColors.textDark,
+                    const SizedBox(height: 24),
+                    
+                    // PDF Download button simulation
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Struk PDF berhasil diunduh'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
+                          );
+                          Navigator.pop(context);
+                        },
+                        child: const Text(
+                          'Simpan Struk PDF',
+                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // PDF Download button simulation
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Struk PDF berhasil diunduh'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
-                        );
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'Simpan Struk PDF',
-                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             );
           },

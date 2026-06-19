@@ -85,12 +85,22 @@ class SiswaProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final studentAsync = ref.watch(siswaStudentProvider);
     final authState = ref.watch(authNotifierProvider);
+    final parentContactAsync = ref.watch(siswaParentContactProvider);
     final String fullName = authState.profile?['full_name'] ?? 'Siswa';
     final String email = authState.profile?['email'] ?? '';
-    final String nis = email.split('@').first;
+    final String nis = authState.profile?['nisn'] ?? email.split('@').first;
+
+    final String parentEmail = parentContactAsync.maybeWhen(
+      data: (data) => data?['email'] ?? 'budi.subarjo@gmail.com',
+      orElse: () => 'budi.subarjo@gmail.com',
+    );
+    final String parentPhone = parentContactAsync.maybeWhen(
+      data: (data) => data?['phone'] ?? '08123456789',
+      orElse: () => '08123456789',
+    );
 
     const String avatarUrl =
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBHY2iWpG2UFhUcpU5RqtgENtU9_Wpve_gbV2HPl_pXpDkZb7Ziws9p-eU8MISdIo5XdX0HQcGL2xl7LD3YpWxYe7Vw07SGnbGEdnIEoafRCkKVJgwMDl2cKIfeBamVdlBJhHjX09AB2sDdBPHpCGNG2L2klMozr_gJgs1Tdr2slsNb1cFtzJffPTpxIlIRgK6H30zyriUVpxCrm5V3ps59kpHps-6p9lq6PrphwMvNrbXGDMBdm8JWr1KipFUKdtK4GMc2TPvjUns';
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuD6arrvyi-ml6AobqY9iRVH-bAtGVKv5rVu0nJZT7i59FPT_OmA4PkCVPZcxohJcnFeNHKKxMlEGwczp9sGTCXSBRwZ53UWn6wqnvQJ6ESGLnCiLIiN_siAQAl3ysBbcCnbqsWvVJQgzGe7XPjzFZ9SP8Jo8H1m8mKOOxLJ4D4ztLEW7kLenZqki4o7cC7O6heqxWa4pbHjqDA0xw5v3YHUJmVtFdFT1-1kR5VAk7w4jCOrdL8gf41TENBbruzO8EieiPGMS_p5etA';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -176,78 +186,7 @@ class SiswaProfileScreen extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 20),
 
-                            // Profile Completion Progress
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(
-                                      Icons.assignment_ind_outlined,
-                                      color: AppColors.primary,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Kelengkapan Profil',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.textDark,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                          child: LinearProgressIndicator(
-                                            value: 0.75,
-                                            backgroundColor: const Color(
-                                              0xFFE5E5EA,
-                                            ),
-                                            valueColor:
-                                                const AlwaysStoppedAnimation<
-                                                  Color
-                                                >(AppColors.primary),
-                                            minHeight: 6,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '75%',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -263,14 +202,14 @@ class SiswaProfileScreen extends ConsumerWidget {
                               icon: CupertinoIcons.envelope,
                               iconColor: AppColors.textGray,
                               label: 'Email',
-                              value: 'budi.subarjo@gmail.com',
+                              value: parentEmail,
                               showDivider: true,
                             ),
                             _buildIconRow(
                               icon: CupertinoIcons.phone,
                               iconColor: AppColors.textGray,
                               label: 'No. HP',
-                              value: '08123456789',
+                              value: parentPhone,
                               showDivider: false,
                             ),
                           ],
@@ -293,7 +232,7 @@ class SiswaProfileScreen extends ConsumerWidget {
                               showDivider: true,
                             ),
                             _buildIconActionRow(
-                              icon: CupertinoIcons.arrow_right_square,
+                              icon: CupertinoIcons.square_arrow_right,
                               iconColor: AppColors.error,
                               label: 'Keluar dari Akun',
                               textColor: AppColors.error,
@@ -371,12 +310,13 @@ class SiswaProfileScreen extends ConsumerWidget {
   }) {
     return Column(
       children: [
-        Row(
-          children: [
-            Icon(icon, size: 18, color: iconColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: iconColor),
+              const SizedBox(width: 12),
+              Text(
                 label,
                 style: GoogleFonts.inter(
                   fontSize: 14,
@@ -384,29 +324,20 @@ class SiswaProfileScreen extends ConsumerWidget {
                   color: AppColors.textDark,
                 ),
               ),
-            ),
-            Flexible(
-              flex: 0,
-              child: Text(
+              const Spacer(),
+              Text(
                 value,
                 style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textGray,
+                  fontSize: 14,
+                  color: AppColors.textDark,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(
-              CupertinoIcons.chevron_right,
-              size: 14,
-              color: Color(0xFFC7C7CC),
-            ),
-          ],
+            ],
+          ),
         ),
         if (showDivider)
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 12),
+            padding: const EdgeInsets.only(top: 10, bottom: 10),
             child: Divider(
               height: 1,
               thickness: 0.5,
@@ -429,12 +360,11 @@ class SiswaProfileScreen extends ConsumerWidget {
       children: [
         InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: iconColor),
+                Icon(icon, size: 20, color: iconColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -457,7 +387,7 @@ class SiswaProfileScreen extends ConsumerWidget {
         ),
         if (showDivider)
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 12),
+            padding: const EdgeInsets.only(top: 10, bottom: 10),
             child: Divider(
               height: 1,
               thickness: 0.5,

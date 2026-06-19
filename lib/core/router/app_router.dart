@@ -7,6 +7,7 @@ import 'package:kantin_digital/features/kantin/screens/pos_dashboard_screen.dart
 import 'package:kantin_digital/features/kantin/screens/cart_screen.dart';
 import 'package:kantin_digital/features/kantin/screens/manage_products_screen.dart';
 import 'package:kantin_digital/features/kantin/screens/product_form_screen.dart';
+import 'package:kantin_digital/features/kantin/screens/order_list_screen.dart';
 import 'package:kantin_digital/features/kantin/screens/check_card_screen.dart';
 import 'package:kantin_digital/features/kantin/screens/sales_history_screen.dart';
 import 'package:kantin_digital/features/kantin/widgets/kantin_main_layout.dart';
@@ -75,6 +76,7 @@ class AppRouter {
   static const String posHome = '/pos';
   static const String posTerminal = '/pos/terminal';
   static const String posCart = '/pos/cart';
+  static const String posOrders = '/pos/orders';
   static const String posCheckCard = '/pos/check-card';
   static const String posManageProducts = '/pos/products';
   static const String posAddEditProduct = '/pos/products/form';
@@ -196,6 +198,10 @@ class AppRouter {
           GoRoute(
             path: posHome,
             builder: (BuildContext context, GoRouterState state) => const PosHomeScreen(),
+          ),
+          GoRoute(
+            path: posOrders,
+            builder: (BuildContext context, GoRouterState state) => const OrderListScreen(),
           ),
           GoRoute(
             path: posCheckCard,

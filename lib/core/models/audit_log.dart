@@ -1,6 +1,9 @@
 /// Data model untuk tabel `audit_logs`.
 ///
 /// Mencatat riwayat audit/aktivitas penting di sistem.
+library;
+import 'dart:convert';
+
 class AuditLog {
   final String id;
   final String? actorId;
@@ -36,12 +39,8 @@ class AuditLog {
       actionType: json['action_type'] as String,
       description: json['description'] as String,
       targetId: json['target_id'] as String?,
-      oldValue: json['old_value'] is Map<String, dynamic>
-          ? json['old_value'] as Map<String, dynamic>
-          : {},
-      newValue: json['new_value'] is Map<String, dynamic>
-          ? json['new_value'] as Map<String, dynamic>
-          : {},
+      oldValue: _parseJsonb(json['old_value']),
+      newValue: _parseJsonb(json['new_value']),
       ipAddress: json['ip_address'] as String?,
       userAgent: json['user_agent'] as String?,
       createdAt: json['created_at'] != null
@@ -51,18 +50,18 @@ class AuditLog {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'actor_id': actorId,
-        'actor_name': actorName,
-        'action_type': actionType,
-        'description': description,
-        'target_id': targetId,
-        'old_value': oldValue,
-        'new_value': newValue,
-        'ip_address': ipAddress,
-        'user_agent': userAgent,
-        'created_at': createdAt?.toIso8601String(),
-      };
+    'id': id,
+    'actor_id': actorId,
+    'actor_name': actorName,
+    'action_type': actionType,
+    'description': description,
+    'target_id': targetId,
+    'old_value': oldValue,
+    'new_value': newValue,
+    'ip_address': ipAddress,
+    'user_agent': userAgent,
+    'created_at': createdAt?.toIso8601String(),
+  };
 
   AuditLog copyWith({
     String? id,
@@ -102,4 +101,17 @@ class AuditLog {
 
   @override
   int get hashCode => id.hashCode;
+
+  /// Parse JSONB value from Supabase — handles Map, String (JSON), or null.
+  static Map<String, dynamic> _parseJsonb(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is String) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return {};
+  }
 }

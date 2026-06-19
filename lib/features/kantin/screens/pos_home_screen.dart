@@ -268,7 +268,7 @@ class PosHomeScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => context.go('/pos/check-card'),
+                      onTap: () => context.go('/pos/orders'),
                       child: Container(
                         height: 48,
                         decoration: BoxDecoration(
@@ -278,10 +278,10 @@ class PosHomeScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(CupertinoIcons.creditcard, color: Color(0xFF1A1C1F), size: 20),
+                            Icon(CupertinoIcons.cart, color: Color(0xFF1A1C1F), size: 20),
                             SizedBox(width: 8),
                             Text(
-                              'Cek Kartu',
+                              'Pesanan',
                               style: TextStyle(
                                 color: Color(0xFF1A1C1F),
                                 fontWeight: FontWeight.w600,

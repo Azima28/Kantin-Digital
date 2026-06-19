@@ -22,7 +22,9 @@ class AuthService {
       if (expectedRole == 'parent') {
         final isNumeric = RegExp(r'^\d+$').hasMatch(rawInput);
         if (!isNumeric) {
-          throw Exception('Akses ditolak: Orang Tua hanya dapat masuk menggunakan NISN Anak (angka).');
+          throw Exception(
+            'Akses ditolak: Orang Tua hanya dapat masuk menggunakan NISN Anak (angka).',
+          );
         }
       }
 
@@ -71,15 +73,9 @@ class AuthService {
           password: password,
         );
         authSessionEstablished = true;
-      } on AuthException catch (authErr) {
-        final errMsg = authErr.message;
-        // If credentials are wrong, reject immediately
-        if (errMsg.contains('Invalid login credentials') ||
-            errMsg.contains('invalid_credentials')) {
-          throw Exception('Email/Username/NISN atau kata sandi salah.');
-        }
-        // For infrastructure errors (Database error querying schema, etc.),
-        // fall through to the fallback path below
+      } on AuthException {
+        // If Supabase Auth fails (e.g. invalid credentials, network/server issues),
+        // we fall through to the profiles-based fallback check in Step 4.
       } catch (_) {
         // Other unexpected errors — fall through to fallback
       }
@@ -143,14 +139,18 @@ class AuthService {
       // Prevent parent login on general siswa/staff tab
       if (role == 'parent' && expectedRole != 'parent') {
         if (authSessionEstablished) await _client.auth.signOut();
-        throw Exception('Akses ditolak: Silakan gunakan pilihan login Orang Tua.');
+        throw Exception(
+          'Akses ditolak: Silakan gunakan pilihan login Orang Tua.',
+        );
       }
 
       // Authorization check: must match expected role if provided
       if (expectedRole.isNotEmpty && role != expectedRole) {
         if (authSessionEstablished) await _client.auth.signOut();
         if (expectedRole == 'petugas_kantin') {
-          throw Exception('Akses ditolak: Hanya petugas/operator kantin yang dapat masuk ke Kasir.');
+          throw Exception(
+            'Akses ditolak: Hanya petugas/operator kantin yang dapat masuk ke Kasir.',
+          );
         } else if (expectedRole == 'student') {
           throw Exception('Akses ditolak: Akun ini bukan akun siswa.');
         } else {
@@ -162,7 +162,8 @@ class AuthService {
       return profile;
     } catch (e) {
       final String errString = e.toString();
-      if (errString.contains('SocketException') || errString.contains('Failed host lookup')) {
+      if (errString.contains('SocketException') ||
+          errString.contains('Failed host lookup')) {
         throw Exception(
           'Gagal menghubungkan ke server. Periksa koneksi internet Anda atau pastikan URL Supabase sudah benar.',
         );
