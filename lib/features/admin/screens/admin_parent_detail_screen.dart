@@ -4,25 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminParentDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  // 1. Fetch profile
-  final profile = await client.from('profiles').select().eq('id', id).single();
-  
-  // 2. Fetch linked children data
-  final List<dynamic> childrenRes = await client
-      .from('parent_students')
-      .select('student_id, students!parent_students_student_id_fkey(class, profiles!students_id_fkey(full_name))')
-      .eq('parent_id', id);
-      
-  return {
-    'profile': profile,
-    'children': List<Map<String, dynamic>>.from(childrenRes),
-  };
-});
+import 'package:kantin_digital/core/models/models.dart';
 
 class AdminParentDetailScreen extends ConsumerStatefulWidget {
   final String parentId;
@@ -162,13 +146,13 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
       ),
       body: parentAsync.when(
         data: (data) {
-          final profile = data['profile'];
-          final List<Map<String, dynamic>> children = data['children'];
+          final profile = data.profile;
+          final List<Map<String, dynamic>> children = data.children;
 
-          final String fullName = profile['full_name'] ?? '';
-          final String email = profile['email'] ?? '';
-          final String phone = profile['phone_number'] ?? '-';
-          final bool isAccountActive = profile['is_active'] ?? true;
+          final String fullName = profile.fullName ?? '';
+          final String email = profile.email ?? '';
+          final String phone = profile.phoneNumber ?? '-';
+          final bool isAccountActive = profile.isActive ?? true;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -377,7 +361,7 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
                       _buildSecurityItem(
                         icon: CupertinoIcons.lock_shield,
                         title: 'Ubah Kata Sandi',
-                        onTap: () => _showChangePasswordDialog(profile['id']),
+                        onTap: () => _showChangePasswordDialog(profile.id),
                       ),
                       const Divider(height: 20, thickness: 0.5, color: Color(0xFFE4E2E1)),
                       _buildSecurityItem(
@@ -435,7 +419,7 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
                               isDestructiveAction: true,
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                _toggleDisableParentAccount(profile['id'], isAccountActive);
+                                _toggleDisableParentAccount(profile.id, isAccountActive);
                               },
                               child: Text(isAccountActive ? 'Nonaktifkan' : 'Aktifkan'),
                             ),
@@ -468,7 +452,7 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
   }
 
   // Helper properties getter to make refactoring provider simple
-  ProviderListenable<AsyncValue<Map<String, dynamic>>> get parentParentDetailProvider =>
+  ProviderListenable<AsyncValue<AdminParentDetail>> get parentParentDetailProvider =>
       adminParentDetailProvider(widget.parentId);
 
   Widget _buildContactRow(IconData icon, String value) {

@@ -122,10 +122,10 @@ class SiswaCardsScreen extends ConsumerWidget {
                     return const Center(child: Text('Data kartu tidak tersedia.'));
                   }
 
-                  final String rfidUid = student['rfid_uid'] ?? 'BELUM DIHUBUNGKAN';
-                  final String studentClass = student['class'] ?? '8-B';
-                  final bool isActive = student['is_active'] ?? true;
-                  final String studentId = student['id'];
+                  final String rfidUid = student.rfidUid ?? 'BELUM DIHUBUNGKAN';
+                  final String studentClass = student.class_ ?? '8-B';
+                  final bool isActive = student.isActive;
+                  final String studentId = student.id;
 
                   return Column(
                     children: [

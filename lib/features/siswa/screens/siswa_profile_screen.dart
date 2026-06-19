@@ -96,7 +96,7 @@ class SiswaProfileScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF5F5F5),
       body: studentAsync.when(
         data: (student) {
-          final String studentClass = student?['class'] ?? '8-B';
+          final String studentClass = student?.class_ ?? '8-B';
 
           return SafeArea(
             child: Align(

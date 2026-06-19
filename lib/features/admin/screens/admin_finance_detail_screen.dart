@@ -5,31 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminFinanceDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  // 1. Fetch profile
-  final profile = await client.from('profiles').select().eq('id', id).single();
-  
-  // 2. Fetch finance officer assignments
-  final officer = await client.from('finance_officers').select().eq('id', id).single();
-  
-  // 3. Fetch audit activities by this officer
-  final List<dynamic> logs = await client
-      .from('audit_logs')
-      .select('action_type, description, created_at')
-      .or('actor_id.eq.$id,actor_name.eq.${profile['full_name']}')
-      .order('created_at', ascending: false)
-      .limit(10);
-      
-  return {
-    'profile': profile,
-    'officer': officer,
-    'logs': List<Map<String, dynamic>>.from(logs),
-  };
-});
+import 'package:kantin_digital/core/models/models.dart';
 
 class AdminFinanceDetailScreen extends ConsumerStatefulWidget {
   final String officerId;
@@ -289,12 +267,12 @@ class _AdminFinanceDetailScreenState extends ConsumerState<AdminFinanceDetailScr
       ),
       body: detailAsync.when(
         data: (data) {
-          final profile = data['profile'];
-          final officer = data['officer'];
-          final List<Map<String, dynamic>> logs = data['logs'];
+          final profile = data.profile;
+          final officer = data.officer;
+          final List<AuditLog> logs = data.recentLogs;
 
-          final String fullName = profile['full_name'] ?? '';
-          final String username = profile['username'] ?? '';
+          final String fullName = profile.fullName ?? '';
+          final String username = profile.username ?? '';
           final String authorityLevel = officer['authority_level'] ?? 'L1';
           final List<dynamic> features = officer['features'] ?? [];
 
@@ -372,7 +350,7 @@ class _AdminFinanceDetailScreenState extends ConsumerState<AdminFinanceDetailScr
 
                 // Change Password Button
                 ElevatedButton.icon(
-                  onPressed: () => _showChangePasswordDialog(profile['id']),
+                  onPressed: () => _showChangePasswordDialog(profile.id),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryTeal,
                     foregroundColor: Colors.white,
@@ -498,11 +476,9 @@ class _AdminFinanceDetailScreenState extends ConsumerState<AdminFinanceDetailScr
                 else
                   Column(
                     children: logs.map((log) {
-                      final String actionType = log['action_type'] ?? '';
-                      final String desc = log['description'] ?? '';
-                      final date = log['created_at'] != null 
-                          ? DateTime.parse(log['created_at']).toLocal() 
-                          : DateTime.now();
+                      final String actionType = log.actionType;
+                      final String desc = log.description;
+                      final date = log.createdAt?.toLocal() ?? DateTime.now();
 
                       // Set specific icon & color for action types
                       IconData logIcon = CupertinoIcons.doc_text;

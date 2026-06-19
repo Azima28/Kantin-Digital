@@ -2,60 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
-import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminDashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
-  final client = ref.read(supabaseClientProvider);
-
-  double studentBalanceSum = 0;
-  double merchantBalanceSum = 0;
-  int userCount = 0;
-  int totalTransactionsToday = 0;
-  double transactionVolumeToday = 0;
-
-  try {
-    // 1. Fetch Student Balance
-    final studentRes = await client.from('students').select('balance');
-    for (var row in studentRes) {
-      studentBalanceSum += double.tryParse(row['balance'].toString()) ?? 0.0;
-    }
-
-    // 2. Fetch Merchant Balance
-    final merchantRes = await client.from('canteen_operators').select('balance_earned');
-    for (var row in merchantRes) {
-      merchantBalanceSum += double.tryParse(row['balance_earned'].toString()) ?? 0.0;
-    }
-
-    // 2b. Fetch user count
-    final profilesRes = await client.from('profiles').select('id');
-    userCount = profilesRes.length;
-
-    // 3. Fetch Transactions Today
-    final now = DateTime.now().toLocal();
-    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    final txRes = await client
-        .from('transactions')
-        .select('total_amount')
-        .eq('status', 'success')
-        .eq('type', 'purchase')
-        .gte('created_at', '${todayStr}T00:00:00Z');
-    
-    totalTransactionsToday = txRes.length;
-    for (var row in txRes) {
-      transactionVolumeToday += double.tryParse(row['total_amount'].toString()) ?? 0.0;
-    }
-  } catch (e) {
-    debugPrint('Error loading live admin metrics: $e');
-  }
-
-  return {
-    'user_count': userCount,
-    'global_balance': studentBalanceSum + merchantBalanceSum,
-    'daily_volume': transactionVolumeToday,
-    'tx_count_today': totalTransactionsToday,
-  };
-});
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
@@ -142,13 +91,13 @@ class AdminDashboardScreen extends ConsumerWidget {
   Widget _buildBody(
     BuildContext context,
     WidgetRef ref,
-    Map<String, dynamic> data,
+    AdminDashboardData data,
     Color primaryTeal,
     Color accentOrange,
     Color successGreen,
   ) {
-    final double globalBalance = data['global_balance'] > 0 
-        ? data['global_balance'] 
+    final double globalBalance = data.globalBalance > 0 
+        ? data.globalBalance 
         : 102500000.0; // Fallback to HTML mockup value if 0
 
     return RefreshIndicator(
@@ -224,7 +173,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    data['user_count'] > 0 ? data['user_count'].toString() : '0',
+                                    data.userCount > 0 ? data.userCount.toString() : '0',
                                     style: GoogleFonts.beVietnamPro(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
@@ -257,8 +206,8 @@ class AdminDashboardScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    data['daily_volume'] > 0
-                                        ? '${(data['daily_volume'] / 1000).toStringAsFixed(1)}K'
+                                    data.dailyVolume > 0
+                                        ? '${(data.dailyVolume / 1000).toStringAsFixed(1)}K'
                                         : '42.5K',
                                     style: GoogleFonts.beVietnamPro(
                                       fontSize: 24,

@@ -6,71 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminMerchantDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  // 1. Fetch profile
-  final profile = await client.from('profiles').select().eq('id', id).single();
-  
-  // 2. Fetch merchant operator details
-  final operator = await client.from('canteen_operators').select().eq('id', id).single();
-  
-  // 3. Fetch products catalog
-  final List<dynamic> products = await client
-      .from('products')
-      .select('name, price, category, is_available')
-      .eq('operator_id', id)
-      .order('name', ascending: true);
-
-  // 4. Fetch recent transactions
-  final List<dynamic> txs = await client
-      .from('transactions')
-      .select('id, total_amount, created_at, student_id, students!transactions_student_id_fkey(profiles!students_id_fkey(nisn))')
-      .eq('operator_id', id)
-      .eq('status', 'success')
-      .eq('type', 'purchase')
-      .order('created_at', ascending: false)
-      .limit(10);
-
-  // Calculate live sales metrics
-  double dailySales = 0;
-  double monthlySales = 0;
-  final now = DateTime.now().toLocal();
-  final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-  final startOfMonthStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-01";
-
-  // Fetch all transactions this month for live aggregation
-  final List<dynamic> monthTxs = await client
-      .from('transactions')
-      .select('total_amount, created_at')
-      .eq('operator_id', id)
-      .eq('status', 'success')
-      .eq('type', 'purchase')
-      .gte('created_at', '${startOfMonthStr}T00:00:00Z');
-
-  for (var tx in monthTxs) {
-    final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-    monthlySales += amount;
-
-    final txDateStr = tx['created_at'] != null 
-        ? DateTime.parse(tx['created_at']).toLocal().toIso8601String().substring(0, 10)
-        : '';
-    if (txDateStr == todayStr) {
-      dailySales += amount;
-    }
-  }
-      
-  return {
-    'profile': profile,
-    'operator': operator,
-    'products': List<Map<String, dynamic>>.from(products),
-    'transactions': List<Map<String, dynamic>>.from(txs),
-    'daily_sales_aggregated': dailySales,
-    'monthly_sales_aggregated': monthlySales,
-  };
-});
+import 'package:kantin_digital/core/models/models.dart';
 
 class AdminMerchantDetailScreen extends ConsumerStatefulWidget {
   final String merchantId;
@@ -180,17 +118,17 @@ class _AdminMerchantDetailScreenState extends ConsumerState<AdminMerchantDetailS
       ),
       body: detailAsync.when(
         data: (data) {
-          final profile = data['profile'];
-          final operator = data['operator'];
-          final List<Map<String, dynamic>> products = data['products'];
-          final List<Map<String, dynamic>> txs = data['transactions'];
+          final profile = data.profile;
+          final operator = data.operator;
+          final List<Product> products = data.products;
+          final List<OperatorTransaction> txs = data.recentTransactions;
           
-          final String fullName = profile['full_name'] ?? '';
-          final String username = profile['username'] ?? '';
+          final String fullName = profile.fullName ?? '';
+          final String username = profile.username ?? '';
           final String canteenName = operator['canteen_name'] ?? 'Stan Kantin';
 
-          final double dailySales = data['daily_sales_aggregated'];
-          final double monthlySales = data['monthly_sales_aggregated'];
+          final double dailySales = data.dailySales;
+          final double monthlySales = data.monthlySales;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -272,7 +210,7 @@ class _AdminMerchantDetailScreenState extends ConsumerState<AdminMerchantDetailS
 
                 // Change Password Button
                 ElevatedButton.icon(
-                  onPressed: () => _showChangePasswordDialog(profile['id']),
+                  onPressed: () => _showChangePasswordDialog(profile.id),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryTeal,
                     foregroundColor: Colors.white,
@@ -460,9 +398,9 @@ class _AdminMerchantDetailScreenState extends ConsumerState<AdminMerchantDetailS
                                 separatorBuilder: (context, i) => const Divider(height: 16, color: Color(0xFFE4E2E1)),
                                 itemBuilder: (context, i) {
                                   final p = products[i];
-                                  final String name = p['name'] ?? '';
-                                  final double price = double.tryParse(p['price']?.toString() ?? '0') ?? 0.0;
-                                  final bool isAvailable = p['is_available'] ?? true;
+                                   final String name = p.name;
+                                  final double price = p.price;
+                                  final bool isAvailable = p.isAvailable;
 
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -556,11 +494,9 @@ class _AdminMerchantDetailScreenState extends ConsumerState<AdminMerchantDetailS
                                 separatorBuilder: (context, i) => const Divider(height: 16, color: Color(0xFFE4E2E1)),
                                 itemBuilder: (context, i) {
                                   final tx = txs[i];
-                                  final double amount = double.tryParse(tx['total_amount']?.toString() ?? '0') ?? 0.0;
-                                  final date = tx['created_at'] != null 
-                                      ? DateTime.parse(tx['created_at']).toLocal() 
-                                      : DateTime.now();
-                                  final String nisn = tx['students']?['profiles']?['nisn'] ?? '-';
+                                   final double amount = tx.totalAmount;
+                                  final date = tx.createdAt?.toLocal() ?? DateTime.now();
+                                  final String nisn = tx.studentNisn ?? '-';
 
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

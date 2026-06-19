@@ -5,49 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
+import 'package:kantin_digital/features/keuangan/providers/keuangan_providers.dart';
 
-final keuanganDashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
-  final client = ref.read(supabaseClientProvider);
-  final profile = ref.read(authNotifierProvider).profile;
-  final officerId = profile?['id'];
-  final school = profile?['assigned_school'] ?? '';
-
-  // Guard: if officer ID is not available, return empty data
-  if (officerId == null || officerId.toString().isEmpty) {
-    return {
-      'profile': profile,
-      'school': school,
-      'totalSaldo': 0.0,
-      'topupToday': 0.0,
-      'topupCount': 0,
-      'koreksCount': 0,
-      'koreksNet': 0.0,
-      'recentLogs': <Map<String, dynamic>>[],
-    };
-  }
-
-  // Fetch total saldo beredar students di sekolah ini
-  // Using audit_logs to get today's activities
-
-  // Recent audit logs by this officer
-  final List<dynamic> logs = await client
-      .from('audit_logs')
-      .select('actor_name, action_type, description, created_at')
-      .eq('actor_id', officerId)
-      .order('created_at', ascending: false)
-      .limit(5);
-
-  return {
-    'profile': profile,
-    'school': school,
-    'totalSaldo': 14520000.0, // mock - in real: SUM(students.balance) by school
-    'topupToday': 1250000.0,
-    'topupCount': 18,
-    'koreksCount': 3,
-    'koreksNet': -35000.0,
-    'recentLogs': List<Map<String, dynamic>>.from(logs),
-  };
-});
+// keuanganDashboardProvider is defined in keuangan_providers.dart
 
 class KeuanganDashboardScreen extends ConsumerWidget {
   const KeuanganDashboardScreen({super.key});
@@ -115,7 +75,7 @@ class KeuanganDashboardScreen extends ConsumerWidget {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.push('/finance/profile'),
+                      onTap: () => context.go('/finance/settings'),
                       child: CircleAvatar(
                         radius: 22,
                         backgroundColor: primaryTeal.withValues(alpha: 0.1),

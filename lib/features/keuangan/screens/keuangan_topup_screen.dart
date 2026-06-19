@@ -6,35 +6,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-import 'package:kantin_digital/features/keuangan/screens/keuangan_dashboard_screen.dart';
-import 'package:kantin_digital/features/keuangan/screens/keuangan_students_screen.dart';
-import 'package:kantin_digital/features/keuangan/screens/keuangan_student_detail_screen.dart';
+import 'package:kantin_digital/features/keuangan/providers/keuangan_providers.dart';
 
 class KeuanganTopupScreen extends ConsumerStatefulWidget {
-  final Map<String, dynamic>? prefilledStudent;
+  final StudentWithProfile? prefilledStudent;
   const KeuanganTopupScreen({super.key, this.prefilledStudent});
 
   @override
-  ConsumerState<KeuanganTopupScreen> createState() =>
-      _KeuanganTopupScreenState();
+  ConsumerState<KeuanganTopupScreen> createState() => _KeuanganTopupScreenState();
 }
 
 class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
   int _currentStep = 1; // 1: Search, 2: Amount, 3: Confirm, 4: Success
-
+  
   // Step 1: Search
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  Map<String, dynamic>? _selectedStudent;
-  List<Map<String, dynamic>> _searchResults = [];
+  StudentWithProfile? _selectedStudent;
+  List<StudentWithProfile> _searchResults = [];
   bool _hasSearched = false;
   Timer? _debounce;
 
   // Step 2: Amount
   final TextEditingController _amountController = TextEditingController();
   int? _selectedQuickAmount;
-
+  
   // Transaction details for success state
   String _refCode = '';
   String _successTime = '';
@@ -95,28 +93,26 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
 
     try {
       final client = ref.read(supabaseClientProvider);
-
+      
       // Query profiles for student matching NISN or name (fuzzy search)
       final List<dynamic> res = await client
           .from('profiles')
-          .select(
-            'id, full_name, nisn, is_active, students:students!students_id_fkey(class, balance, rfid_uid)',
-          )
+          .select('id, full_name, nisn, is_active, students:students!students_id_fkey(class, balance, rfid_uid)')
           .eq('role', 'student')
           .or('nisn.ilike."%$query%",full_name.ilike."%$query%"')
           .limit(5);
 
       setState(() {
-        _searchResults = List<Map<String, dynamic>>.from(res);
+        _searchResults = res
+            .map((item) => StudentWithProfile.fromJoinedJson(item as Map<String, dynamic>))
+            .toList();
         _hasSearched = true;
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Pencarian gagal: ${e.toString().replaceAll('Exception: ', '')}',
-            ),
+            content: Text('Pencarian gagal: ${e.toString().replaceAll('Exception: ', '')}'),
             backgroundColor: dangerRed,
             behavior: SnackBarBehavior.floating,
           ),
@@ -141,10 +137,10 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
       final profile = ref.read(authNotifierProvider).profile;
       final actorName = profile?['full_name'] ?? 'Admin Keuangan';
       final actorId = profile?['id'];
-
-      final studentId = _selectedStudent!['id'];
+      
+      final studentId = _selectedStudent!.id;
       final double amount = _getAmount();
-
+      
       // 1. Fetch current student details
       final studentData = await client
           .from('students')
@@ -152,19 +148,13 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
           .eq('id', studentId)
           .single();
 
-      final double currentBalance =
-          double.tryParse(studentData['balance'].toString()) ?? 0.0;
+      final double currentBalance = double.tryParse(studentData['balance'].toString()) ?? 0.0;
       final double newBalance = currentBalance + amount;
 
       // 2. Fetch a default operator ID to associate with the transaction (violates NOT NULL if empty)
-      final operators = await client
-          .from('canteen_operators')
-          .select('id')
-          .limit(1);
+      final operators = await client.from('canteen_operators').select('id').limit(1);
       if (operators.isEmpty) {
-        throw Exception(
-          'Tidak ada operator kantin terdaftar untuk mencatat transaksi top-up.',
-        );
+        throw Exception('Tidak ada operator kantin terdaftar untuk mencatat transaksi top-up.');
       }
       final String operatorId = operators.first['id'];
 
@@ -188,8 +178,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
         'actor_id': actorId,
         'actor_name': actorName,
         'action_type': 'TOPUP_TUNAI',
-        'description':
-            'Top-up tunai sukses sebesar Rp ${NumberFormat.decimalPattern("id_ID").format(amount)} untuk $_studentName',
+        'description': 'Top-up tunai sukses sebesar Rp ${NumberFormat.decimalPattern("id_ID").format(amount)} untuk $_studentName',
         'target_id': studentId,
         'old_value': {'balance': currentBalance.toInt()},
         'new_value': {'balance': newBalance.toInt()},
@@ -199,8 +188,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
       await client.from('notifications').insert({
         'student_id': studentId,
         'title': 'Top-Up Saldo Sukses!',
-        'message':
-            'Pengisian saldo saku sebesar Rp ${NumberFormat.decimalPattern("id_ID").format(amount)} via Kasir Tunai berhasil.',
+        'message': 'Pengisian saldo saku sebesar Rp ${NumberFormat.decimalPattern("id_ID").format(amount)} via Kasir Tunai berhasil.',
         'type': 'topup',
       });
 
@@ -211,8 +199,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
 
       final now = DateTime.now();
       setState(() {
-        _refCode =
-            'TXN-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${Random().nextInt(9000) + 1000}';
+        _refCode = 'TXN-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${Random().nextInt(9000) + 1000}';
         _successTime = DateFormat('dd MMM yyyy, HH:mm:ss').format(now);
         _currentStep = 4; // success screen
       });
@@ -235,22 +222,14 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
     }
   }
 
-  String get _studentName => _selectedStudent?['full_name'] ?? 'Siswa';
-  String get _studentNisn => _selectedStudent?['nisn'] ?? '-';
-  String get _studentClass => _selectedStudent?['students']?['class'] ?? '-';
-  double get _studentBalance =>
-      double.tryParse(
-        _selectedStudent?['students']?['balance']?.toString() ?? '0',
-      ) ??
-      0.0;
+  String get _studentName => _selectedStudent?.fullName ?? 'Siswa';
+  String get _studentNisn => _selectedStudent?.nisn ?? '-';
+  String get _studentClass => _selectedStudent?.class_ ?? '-';
+  double get _studentBalance => _selectedStudent?.balance ?? 0.0;
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
+    final fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBF9F8),
@@ -260,11 +239,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           'Top-Up Tunai',
-          style: GoogleFonts.beVietnamPro(
-            fontWeight: FontWeight.bold,
-            color: primaryTeal,
-            fontSize: 18,
-          ),
+          style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: primaryTeal, fontSize: 18),
         ),
         leading: _currentStep == 4
             ? const SizedBox() // Disable back button on success screen
@@ -297,10 +272,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: _buildStepContent(fmt),
               ),
             ),
@@ -320,13 +292,9 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             _currentStep == 1
                 ? 'LANGKAH 1 DARI 3 — Cari Siswa'
                 : _currentStep == 2
-                ? 'LANGKAH 2 DARI 3 — Konfirmasi & Nominal'
-                : 'LANGKAH 3 DARI 3 — Konfirmasi',
-            style: GoogleFonts.beVietnamPro(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF6F7978),
-            ),
+                    ? 'LANGKAH 2 DARI 3 — Konfirmasi & Nominal'
+                    : 'LANGKAH 3 DARI 3 — Konfirmasi',
+            style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF6F7978)),
           ),
           const SizedBox(height: 6),
           Row(
@@ -345,9 +313,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
                 child: Container(
                   height: 4,
                   decoration: BoxDecoration(
-                    color: _currentStep >= 2
-                        ? primaryTeal
-                        : const Color(0xFFE4E2E1),
+                    color: _currentStep >= 2 ? primaryTeal : const Color(0xFFE4E2E1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -357,9 +323,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
                 child: Container(
                   height: 4,
                   decoration: BoxDecoration(
-                    color: _currentStep >= 3
-                        ? primaryTeal
-                        : const Color(0xFFE4E2E1),
+                    color: _currentStep >= 3 ? primaryTeal : const Color(0xFFE4E2E1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -393,11 +357,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
         const SizedBox(height: 8),
         Text(
           'Masukkan NISN atau Nama Siswa:',
-          style: GoogleFonts.beVietnamPro(
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF1B1C1B),
-            fontSize: 14,
-          ),
+          style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.w600, color: const Color(0xFF1B1C1B), fontSize: 14),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -411,16 +371,10 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
           },
           decoration: InputDecoration(
             hintText: 'Masukkan NISN atau Nama Lengkap...',
-            hintStyle: GoogleFonts.beVietnamPro(
-              color: const Color(0xFF6F7978),
-              fontSize: 14,
-            ),
+            hintStyle: GoogleFonts.beVietnamPro(color: const Color(0xFF6F7978), fontSize: 14),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFE4E2E1)),
@@ -439,29 +393,18 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
                     child: SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: primaryTeal,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: primaryTeal),
                     ),
                   )
                 : _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(
-                      CupertinoIcons.clear_circled_solid,
-                      color: Color(0xFF6F7978),
-                      size: 18,
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                      _searchStudent('');
-                    },
-                  )
-                : const Icon(
-                    CupertinoIcons.search,
-                    color: Color(0xFF6F7978),
-                    size: 20,
-                  ),
+                    ? IconButton(
+                        icon: const Icon(CupertinoIcons.clear_circled_solid, color: Color(0xFF6F7978), size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          _searchStudent('');
+                        },
+                      )
+                    : const Icon(CupertinoIcons.search, color: Color(0xFF6F7978), size: 20),
           ),
         ),
         const SizedBox(height: 20),
@@ -479,22 +422,14 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Text(
                 'Siswa tidak ditemukan.',
-                style: GoogleFonts.beVietnamPro(
-                  color: dangerRed,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: GoogleFonts.beVietnamPro(color: dangerRed, fontSize: 13, fontWeight: FontWeight.w500),
               ),
             ),
           )
         else if (_searchResults.isNotEmpty) ...[
           Text(
             'Hasil Pencarian (${_searchResults.length}):',
-            style: GoogleFonts.beVietnamPro(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF6F7978),
-            ),
+            style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF6F7978)),
           ),
           const SizedBox(height: 8),
           ListView.separated(
@@ -504,10 +439,10 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final student = _searchResults[index];
-              final name = student['full_name'] ?? 'Tanpa Nama';
-              final nisn = student['nisn'] ?? '-';
-              final className = student['students']?['class'] ?? '-';
-
+              final name = student.fullName;
+              final nisn = student.nisn ?? '-';
+              final className = student.class_ ?? '-';
+              
               return Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -522,30 +457,17 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
                   ],
                 ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   title: Text(
                     name,
-                    style: GoogleFonts.beVietnamPro(
-                      fontWeight: FontWeight.bold,
-                      color: primaryTeal,
-                      fontSize: 14,
-                    ),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: primaryTeal, fontSize: 14),
                   ),
                   subtitle: Text(
                     'NISN: $nisn • Kelas $className',
-                    style: GoogleFonts.beVietnamPro(
-                      color: const Color(0xFF6F7978),
-                      fontSize: 12,
-                    ),
+                    style: GoogleFonts.beVietnamPro(color: const Color(0xFF6F7978), fontSize: 12),
                   ),
                   trailing: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: primaryTeal.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(20),
@@ -575,18 +497,11 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Column(
                 children: [
-                  Icon(
-                    CupertinoIcons.search,
-                    size: 48,
-                    color: primaryTeal.withValues(alpha: 0.2),
-                  ),
+                  Icon(CupertinoIcons.search, size: 48, color: primaryTeal.withValues(alpha: 0.2)),
                   const SizedBox(height: 12),
                   Text(
                     'Ketik nama atau NISN siswa\nuntuk memulai pencarian.',
-                    style: GoogleFonts.beVietnamPro(
-                      color: const Color(0xFF6F7978),
-                      fontSize: 13,
-                    ),
+                    style: GoogleFonts.beVietnamPro(color: const Color(0xFF6F7978), fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -623,41 +538,21 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    CupertinoIcons.checkmark_circle_fill,
-                    color: successGreen,
-                    size: 18,
-                  ),
+                  const Icon(CupertinoIcons.checkmark_circle_fill, color: successGreen, size: 18),
                   const SizedBox(width: 6),
                   Text(
                     'Siswa Ditemukan',
-                    style: GoogleFonts.beVietnamPro(
-                      fontWeight: FontWeight.bold,
-                      color: successGreen,
-                      fontSize: 13,
-                    ),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: successGreen, fontSize: 13),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               _buildInfoRow('Nama', _studentName),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('NISN', _studentNisn),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Kelas', 'Kelas $_studentClass'),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Saldo Saat Ini', fmt.format(_studentBalance)),
             ],
           ),
@@ -666,11 +561,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
 
         Text(
           'Nominal Top-Up (Uang Tunai Diterima)',
-          style: GoogleFonts.beVietnamPro(
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1B1C1B),
-            fontSize: 13,
-          ),
+          style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: const Color(0xFF1B1C1B), fontSize: 13),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -683,21 +574,12 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
           },
           decoration: InputDecoration(
             prefixText: 'Rp ',
-            prefixStyle: GoogleFonts.beVietnamPro(
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1B1C1B),
-            ),
+            prefixStyle: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: const Color(0xFF1B1C1B)),
             hintText: '0',
-            hintStyle: GoogleFonts.beVietnamPro(
-              color: const Color(0xFF6F7978),
-              fontSize: 14,
-            ),
+            hintStyle: GoogleFonts.beVietnamPro(color: const Color(0xFF6F7978), fontSize: 14),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFE4E2E1)),
@@ -717,10 +599,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
         // Quick select chips
         Text(
           'Pilih Cepat:',
-          style: GoogleFonts.beVietnamPro(
-            fontSize: 12,
-            color: const Color(0xFF6F7978),
-          ),
+          style: GoogleFonts.beVietnamPro(fontSize: 12, color: const Color(0xFF6F7978)),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -753,11 +632,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
         const SizedBox(height: 20),
         Text(
           'Saldo Baru (Preview): ${fmt.format(newBalance)}',
-          style: GoogleFonts.beVietnamPro(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: primaryTeal,
-          ),
+          style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: primaryTeal),
         ),
         const SizedBox(height: 32),
 
@@ -774,9 +649,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryTeal,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
             child: Text(
@@ -820,58 +693,21 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             children: [
               Text(
                 '📋 RINGKASAN TOP-UP TUNAI',
-                style: GoogleFonts.beVietnamPro(
-                  fontWeight: FontWeight.bold,
-                  color: primaryTeal,
-                  fontSize: 14,
-                ),
+                style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: primaryTeal, fontSize: 14),
               ),
               const SizedBox(height: 16),
               _buildInfoRow('Nama Siswa', _studentName),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('NISN', _studentNisn),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Kelas', 'Kelas $_studentClass'),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Saldo Lama', fmt.format(_studentBalance)),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
-              _buildInfoRow(
-                'Nominal Top-Up',
-                '+ ${fmt.format(amount)}',
-                valueColor: successGreen,
-              ),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
-              _buildInfoRow(
-                'Saldo Baru',
-                fmt.format(newBalance),
-                isBold: true,
-                valueColor: primaryTeal,
-              ),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
+              _buildInfoRow('Nominal Top-Up', '+ ${fmt.format(amount)}', valueColor: successGreen),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
+              _buildInfoRow('Saldo Baru', fmt.format(newBalance), isBold: true, valueColor: primaryTeal),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Metode', 'Tunai (Cash)'),
             ],
           ),
@@ -885,9 +721,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: accentOrange,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
             child: _isLoading
@@ -907,10 +741,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
         Center(
           child: Text(
             'Aksi ini akan dicatat dalam audit log.',
-            style: GoogleFonts.beVietnamPro(
-              fontSize: 12,
-              color: const Color(0xFF6F7978),
-            ),
+            style: GoogleFonts.beVietnamPro(fontSize: 12, color: const Color(0xFF6F7978)),
           ),
         ),
       ],
@@ -972,29 +803,12 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
           ),
           child: Column(
             children: [
-              _buildInfoRow(
-                'Nominal Pengisian',
-                fmt.format(amount),
-                valueColor: successGreen,
-                isBold: true,
-              ),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              _buildInfoRow('Nominal Pengisian', fmt.format(amount), valueColor: successGreen, isBold: true),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Saldo Baru', fmt.format(newBalance), isBold: true),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Waktu Transaksi', _successTime),
-              const Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Color(0xFFE4E2E1),
-              ),
+              const Divider(height: 16, thickness: 0.5, color: Color(0xFFE4E2E1)),
               _buildInfoRow('Kode Referensi', _refCode),
             ],
           ),
@@ -1008,9 +822,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                    'Simulasi Cetak Struk: Struk dikirim ke printer thermal.',
-                  ),
+                  content: Text('Simulasi Cetak Struk: Struk dikirim ke printer thermal.'),
                   backgroundColor: successGreen,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -1019,18 +831,13 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             icon: const Icon(CupertinoIcons.printer_fill, size: 18),
             label: Text(
               'CETAK STRUK / BAGIKAN',
-              style: GoogleFonts.beVietnamPro(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
+              style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: primaryTeal,
               side: const BorderSide(color: primaryTeal),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
           ),
         ),
@@ -1044,9 +851,7 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryTeal,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
             child: Text(
@@ -1063,21 +868,13 @@ class _KeuanganTopupScreenState extends ConsumerState<KeuanganTopupScreen> {
     );
   }
 
-  Widget _buildInfoRow(
-    String label,
-    String value, {
-    bool isBold = false,
-    Color? valueColor,
-  }) {
+  Widget _buildInfoRow(String label, String value, {bool isBold = false, Color? valueColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: GoogleFonts.beVietnamPro(
-            color: const Color(0xFF6F7978),
-            fontSize: 13,
-          ),
+          style: GoogleFonts.beVietnamPro(color: const Color(0xFF6F7978), fontSize: 13),
         ),
         Flexible(
           child: Text(

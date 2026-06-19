@@ -422,6 +422,7 @@ class _NfcPaymentModal extends ConsumerStatefulWidget {
 
 class _NfcPaymentModalState extends ConsumerState<_NfcPaymentModal> {
   final TextEditingController _simUidController = TextEditingController();
+  bool _isConfirming = false;
 
   @override
   void initState() {
@@ -724,9 +725,10 @@ class _NfcPaymentModalState extends ConsumerState<_NfcPaymentModal> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   elevation: 0,
                 ),
-                onPressed: operatorId == null || operatorId.isEmpty
+                onPressed: operatorId == null || operatorId.isEmpty || _isConfirming
                     ? null
                     : () {
+                        setState(() => _isConfirming = true);
                         ref.read(nfcPaymentProvider.notifier).confirmPurchase(
                           operatorId: operatorId,
                           items: cartState.items,

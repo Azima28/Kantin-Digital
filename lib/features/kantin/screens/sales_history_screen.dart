@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/core/models/models.dart';
 import 'package:kantin_digital/core/utils/currency_formatter.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
 import 'package:kantin_digital/features/kantin/providers/pos_providers.dart';
@@ -83,12 +84,12 @@ class SalesHistoryScreen extends ConsumerWidget {
     );
   }
 
-  void _showTransactionDetails(BuildContext context, WidgetRef ref, Map<String, dynamic> tx) {
-    final String txId = tx['id']?.toString() ?? '';
-    final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-    final String studentName = tx['students']?['profiles']?['full_name'] ?? 'Siswa';
-    final String timeStr = tx['created_at'] != null 
-        ? DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(tx['created_at']).toLocal())
+  void _showTransactionDetails(BuildContext context, WidgetRef ref, OperatorTransaction tx) {
+    final String txId = tx.id;
+    final double amount = tx.totalAmount;
+    final String studentName = tx.studentName ?? 'Siswa';
+    final String timeStr = tx.createdAt != null 
+        ? DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt!.toLocal())
         : '-';
 
     showModalBottomSheet(
@@ -160,9 +161,9 @@ class SalesHistoryScreen extends ConsumerWidget {
                           itemCount: items.length,
                           itemBuilder: (context, i) {
                             final item = items[i];
-                            final String name = item['products']?['name'] ?? 'Jajanan';
-                            final double itemPrice = double.tryParse(item['unit_price'].toString()) ?? 0.0;
-                            final int qty = int.tryParse(item['quantity'].toString()) ?? 1;
+                            final String name = item.productName;
+                            final double itemPrice = item.unitPrice;
+                            final int qty = item.quantity;
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -292,7 +293,7 @@ class SalesHistoryScreen extends ConsumerWidget {
 
                 // Transactions list
                 transactionsAsync.when(
-                  data: (List<Map<String, dynamic>> txs) {
+                  data: (List<OperatorTransaction> txs) {
                     if (txs.isEmpty) {
                       return SliverFillRemaining(
                         hasScrollBody: false,
@@ -327,14 +328,12 @@ class SalesHistoryScreen extends ConsumerWidget {
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
                             final tx = txs[index];
-                            final String id = tx['id']?.toString() ?? '';
-                            final double amount = double.tryParse(tx['total_amount'].toString()) ?? 0.0;
-                            final String studentName = tx['students']?['profiles']?['full_name'] ?? 'Siswa';
-                            final String status = tx['status']?.toString() ?? 'success';
+                            final String id = tx.id;
+                            final double amount = tx.totalAmount;
+                            final String studentName = tx.studentName ?? 'Siswa';
+                            final String status = tx.status ?? 'success';
                             
-                            final DateTime createdAt = tx['created_at'] != null 
-                                ? DateTime.parse(tx['created_at']).toLocal()
-                                : DateTime.now();
+                            final DateTime createdAt = tx.createdAt?.toLocal() ?? DateTime.now();
                             final String timeStr = DateFormat('HH:mm').format(createdAt);
                             final String dateStr = DateFormat('dd MMM').format(createdAt);
 
@@ -343,7 +342,7 @@ class SalesHistoryScreen extends ConsumerWidget {
                             
                             // Can refund only if it is a successful purchase and less than 10 minutes ago
                             final bool isWithinRefundWindow = DateTime.now().difference(createdAt).inMinutes < 10;
-                            final bool canRefund = status == 'success' && tx['type'] == 'purchase' && isWithinRefundWindow;
+                            final bool canRefund = status == 'success' && tx.type == 'purchase' && isWithinRefundWindow;
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),

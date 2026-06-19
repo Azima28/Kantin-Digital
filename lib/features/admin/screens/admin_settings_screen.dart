@@ -4,18 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kantin_digital/core/constants/app_colors.dart';
+import 'package:kantin_digital/features/admin/providers/admin_providers.dart';
 import 'package:kantin_digital/features/auth/providers/auth_provider.dart';
-
-final adminSettingsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
-  final client = ref.read(supabaseClientProvider);
-  
-  final List<dynamic> res = await client.from('system_settings').select('key, value');
-  final Map<String, dynamic> settings = {};
-  for (var row in res) {
-    settings[row['key']] = row['value'];
-  }
-  return settings;
-});
 
 class AdminSettingsScreen extends ConsumerStatefulWidget {
   const AdminSettingsScreen({super.key});
